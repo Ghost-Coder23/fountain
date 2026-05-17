@@ -40,9 +40,9 @@
           <tr>
             <td><code>{{ inv.invoice_number }}</code></td>
             <td>{{ inv.student.user.get_full_name }}</td>
-            <td>{{ inv.currency }} {{ inv.amount }}</td>
-            <td class="text-success">{{ inv.currency }} {{ inv.amount_paid }}</td>
-            <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}">{{ inv.currency }} {{ inv.balance }}</td>
+            <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
+            <td class="text-success"><span class="money-amount">{{ inv.currency }} {{ inv.amount_paid }}</span></td>
+            <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}"><span class="money-amount">{{ inv.currency }} {{ inv.balance }}</span></td>
             <td>{{ inv.due_date|default:"-" }}</td>
             <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
             <td>

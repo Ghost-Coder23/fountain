@@ -131,6 +131,7 @@ class GalleryItem(SyncBaseModel):
     media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='image')
     image = models.ImageField(upload_to='gallery/images/', blank=True, null=True, help_text="Upload if media type is Image")
     video_url = models.URLField(blank=True, null=True, help_text="YouTube or Vimeo URL if media type is Video")
+    video_file = models.FileField(upload_to='gallery/videos/', blank=True, null=True, help_text="Upload video file (MP4, WebM, etc.")
     is_featured = models.BooleanField(default=False, help_text="Show on the home page")
 
     objects = models.Manager() # Default to standard manager for global showcase

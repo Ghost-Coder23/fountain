@@ -1,5 +1,9 @@
 """
 Django settings for EduCore - Multi-tenant School Management SaaS
+FIXED:
+  1. CSRF_TRUSTED_ORIGINS now includes localhost for local dev — missing this
+     caused every local POST to return 403 Forbidden.
+  2. REST_FRAMEWORK explicitly defined so DRF auth never silently changes.
 """
 import os
 from pathlib import Path
@@ -11,9 +15,13 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*'] if DEBUG else ['.educore.com', 'techflex.pythonanywhere.com', 'localhost', '127.0.0.1']
 
+# FIX: added localhost origins so local dev POSTs are not rejected with 403
 CSRF_TRUSTED_ORIGINS = [
-   
-    "https://5f0f-77-246-55-229.ngrok-free.app",
+    "https://techflex.pythonanywhere.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost",
+    "http://127.0.0.1",
 ]
 
 # Tenant Settings
@@ -38,7 +46,7 @@ INSTALLED_APPS = [
     'notifications',
     'analytics',
     'superadmin',
-'inventory.apps.InventoryConfig',
+    'inventory.apps.InventoryConfig',
     'core',
     'messaging',
     'rest_framework',
@@ -125,9 +133,21 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST ='smtp.gmail.com'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'bsoftdgital@gmail.com'
 EMAIL_HOST_PASSWORD = 'scvbeqocwjhnswok'
 DEFAULT_FROM_EMAIL = 'Academialink <bsoftdgital@gmail.com>'
+
+# FIX: explicitly define DRF settings so auth never silently changes.
+# SessionAuthentication is correct here — users log in via Django sessions,
+# and the SW replays forms with credentials: 'same-origin'.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}

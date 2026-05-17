@@ -44,3 +44,20 @@ class GalleryItemAdmin(admin.ModelAdmin):
     list_filter = ['media_type', 'is_featured', 'school']
     search_fields = ['title', 'description', 'school__name']
     readonly_fields = ['created_at']
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'description', 'media_type', 'school', 'is_featured')
+        }),
+        ('Image', {
+            'fields': ('image',),
+            'classes': ('collapse',)
+        }),
+        ('Video', {
+            'fields': ('video_url', 'video_file'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )

@@ -1,0 +1,29 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}{{ object.pk|yesno:"Edit,Add" }} Assessment Component{% endblock %}
+{% block page_title %}{{ object.pk|yesno:"Edit,Add" }} Assessment Component{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-md-6">
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+<div class="mb-3">
+  <label class="form-label">Component Name</label>
+  <input type="text" name="name" class="form-control" placeholder="e.g. Assignment, Quiz, Exam" maxlength="100" required value="{{ form.name.value|default:'' }}">
+</div>
+<div class="mb-3">
+  <label class="form-label">Subject (leave blank for school-wide)</label>
+  {{ form.subject }}
+</div>
+<div class="mb-3">
+  <label class="form-label">Weight (%)</label>
+  <input type="number" name="weight" class="form-control" min="0" max="100" step="0.5" required value="{{ form.weight.value|default:0 }}">
+</div>
+<div class="mb-3">
+  <label class="form-label">Order</label>
+  <input type="number" name="order" class="form-control" required value="{{ form.order.value|default:0 }}">
+</div>
+<button type="submit" class="btn btn-primary">Save</button>
+<a href="{% url 'results:assessment_component_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+</div></div>
+</div></div>
+{% endblock %}

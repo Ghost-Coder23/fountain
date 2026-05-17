@@ -374,6 +374,73 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 /* Sidebar overlay */
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 199; }
 .sidebar-overlay.show { display: block; }
+
+/* Money Amount Toggle */
+.money-amount {
+  display: inline;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.money-hidden .money-amount {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Mobile Responsive Improvements */
+@media (max-width: 768px) {
+  .card {
+    margin-bottom: 12px;
+  }
+  
+  .card-body {
+    padding: 16px;
+  }
+  
+  .row.g-3 {
+    --bs-gutter-y: 12px;
+  }
+  
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table td, .table th {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+  
+  .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.82rem;
+  }
+  
+  h5, h6 {
+    font-size: 1.05rem;
+  }
+  
+  .topbar {
+    padding: 10px 12px;
+  }
+  
+  .topbar-right {
+    gap: 8px;
+  }
+  
+  .sidebar {
+    width: 260px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 12px;
+  }
+  
+  .row.g-3 > [class*="col-"] {
+    width: 100%;
+  }
+}
 </style>
 {% block extra_css %}{% endblock %}
 </head>
@@ -394,31 +461,20 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 
   <nav class="py-2">
     <a href="{% url 'analytics:dashboard' %}" class="nav-link {% if request.path == '/analytics/dashboard/' %}active{% endif %}">
-      <i class="bi bi-grid-1x2"></i> Dashboard
-    </a>
-    <a href="{% url 'messaging:list' %}" class="nav-link {% if 'messages' in request.path %}active{% endif %}">
-      <i class="bi bi-chat-left-text"></i> Messages
-    </a>
-    <a href="{% url 'offline_sync' %}" class="nav-link {% if request.resolver_match.url_name == 'offline_sync' %}active{% endif %}">
-      <i class="bi bi-cloud-arrow-up"></i>
-      <span>Offline Sync</span>
-      <span id="sync-sidebar-badge" class="badge bg-warning text-dark ms-auto d-none" style="font-size: 0.65rem; border-radius: 50px;">0</span>
-    </a>
-    <a href="{% url 'notifications:announcements' %}" class="nav-link {% if 'announcements' in request.path %}active{% endif %}">
-      <i class="bi bi-megaphone"></i> Announcements
+      <i class="bi bi-house-door"></i> Dashboard
     </a>
 
-    {% if school_role in 'headmaster,teacher' %}
-    <div class="nav-section">Academic</div>
+    {% if school_role in 'headmaster,teacher,admin' %}
+    <div class="nav-section">Academics</div>
     <a href="{% url 'academics:student_list' %}" class="nav-link {% if 'students' in request.path %}active{% endif %}">
       <i class="bi bi-people"></i> Students
     </a>
-    {% if school_role in 'headmaster,teacher,admin' %}
     <a href="{% url 'academics:teacher_list' %}" class="nav-link {% if 'teachers' in request.path %}active{% endif %}">
-      <i class="bi bi-person-badge"></i> Teachers Directory
+      <i class="bi bi-person-badge"></i> Teachers
     </a>
+    {% if school_role in 'headmaster,admin' %}
     <a href="{% url 'academics:parent_list' %}" class="nav-link {% if 'parents' in request.path %}active{% endif %}">
-      <i class="bi bi-people-fill"></i> Parents Directory
+      <i class="bi bi-person-heart"></i> Parents
     </a>
     {% endif %}
     <a href="{% url 'academics:class_section_list' %}" class="nav-link {% if 'sections' in request.path %}active{% endif %}">
@@ -427,99 +483,99 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <a href="{% url 'academics:subject_list' %}" class="nav-link {% if 'subjects' in request.path %}active{% endif %}">
       <i class="bi bi-book"></i> Subjects
     </a>
-    {% if school_role in 'headmaster,teacher,admin' %}
     <a href="{% url 'timetable:dashboard' %}" class="nav-link {% if 'timetable' in request.path %}active{% endif %}">
       <i class="bi bi-calendar-week"></i> Timetables
+    </a>
+
+    <div class="nav-section">Attendance</div>
+    <a href="{% url 'attendance:home' %}" class="nav-link {% if 'attendance' in request.path and 'report' not in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-check"></i> Mark Attendance
+    </a>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'attendance:report' %}" class="nav-link {% if 'report' in request.path %}active{% endif %}">
+      <i class="bi bi-bar-chart"></i> Attendance Reports
     </a>
     {% endif %}
 
-    <div class="nav-section">Attendance</div>
-    <a href="{% url 'attendance:home' %}" class="nav-link {% if 'attendance' in request.path %}active{% endif %}">
-      <i class="bi bi-calendar-check"></i> Attendance
-    </a>
-
     <div class="nav-section">Results</div>
+    {% if school_role in 'headmaster,teacher' %}
     <a href="{% url 'results:result_entry' %}" class="nav-link {% if 'entry' in request.path %}active{% endif %}">
       <i class="bi bi-pencil-square"></i> Enter Results
     </a>
-    {% elif school_role == 'admin' %}
-    <div class="nav-section">Academic</div>
-    <a href="{% url 'academics:teacher_list' %}" class="nav-link {% if 'teachers' in request.path %}active{% endif %}">
-      <i class="bi bi-person-badge"></i> Teachers Directory
-    </a>
-    <a href="{% url 'academics:parent_list' %}" class="nav-link {% if 'parents' in request.path %}active{% endif %}">
-      <i class="bi bi-people-fill"></i> Parents Directory
-    </a>
-    <a href="{% url 'timetable:dashboard' %}" class="nav-link {% if 'timetable' in request.path %}active{% endif %}">
-      <i class="bi bi-calendar-week"></i> Timetables
-    </a>
-    <div class="nav-section">Analytics</div>
-    <a href="{% url 'analytics:dashboard' %}#admin" class="nav-link {% if 'dashboard' in request.path %}active{% endif %}">
-      <i class="bi bi-graph-up"></i> Admin Stats
-    </a>
-    <a href="{% url 'attendance:report' %}" class="nav-link {% if 'attendance_report' in request.path %}active{% endif %}">
-      <i class="bi bi-bar-chart"></i> Attendance Stats
+    <a href="{% url 'results:pending_approvals' %}" class="nav-link {% if 'pending' in request.path %}active{% endif %}">
+      <i class="bi bi-check-circle"></i> Pending Approvals
     </a>
     {% endif %}
     {% if school_role == 'headmaster' %}
     <a href="{% url 'results:student_proceed' %}" class="nav-link {% if 'proceed' in request.path %}active{% endif %}">
-      <i class="bi bi-arrow-up-circle"></i> Bulk Proceed
+      <i class="bi bi-arrow-up-circle"></i> Promote Students
     </a>
     {% endif %}
     <a href="{% url 'results:term_list' %}" class="nav-link {% if 'terms' in request.path %}active{% endif %}">
       <i class="bi bi-calendar3"></i> Terms
     </a>
-    <a href="{% url 'dashboard' %}" class="nav-link {% if '/school/dashboard/' in request.path %}active{% endif %}">
-      <i class="bi bi-house-door"></i> Admin Panel
-    </a>
-  
+    {% endif %}
 
     {% if school_role == 'admin' %}
     <div class="nav-section">Finance</div>
-    <a href="{% url 'fees:home' %}" class="nav-link {% if 'fees' in request.path %}active{% endif %}">
-      <i class="bi bi-cash-stack"></i> Finance & Fees
-    </a>
-    <a href="{% url 'fees:expense_list' %}" class="nav-link {% if 'expenses' in request.path %}active{% endif %}">
-      <i class="bi bi-dash-circle"></i> Expense Tracking
+    <a href="{% url 'fees:home' %}" class="nav-link {% if 'fees' in request.path and 'expenses' not in request.path and 'invoices' not in request.path and 'structures' not in request.path %}active{% endif %}">
+      <i class="bi bi-cash-stack"></i> Finance Dashboard
     </a>
     <a href="{% url 'fees:invoice_list' %}" class="nav-link {% if 'invoices' in request.path %}active{% endif %}">
       <i class="bi bi-receipt"></i> Invoices
     </a>
+    <a href="{% url 'fees:expense_list' %}" class="nav-link {% if 'expenses' in request.path %}active{% endif %}">
+      <i class="bi bi-dash-circle"></i> Expenses
+    </a>
     <a href="{% url 'fees:structure_list' %}" class="nav-link {% if 'structures' in request.path %}active{% endif %}">
       <i class="bi bi-list-check"></i> Fee Structures
     </a>
+    <div class="nav-section">Inventory</div>
+    <a href="{% url 'inventory:dashboard' %}" class="nav-link {% if 'inventory' in request.path %}active{% endif %}">
+      <i class="bi bi-box-seam"></i> Inventory
+    </a>
     {% endif %}
 
-    <div class="nav-section">Administration</div>
-    <a href="{% url 'academics:academic_year_list' %}" class="nav-link {% if 'years' in request.path %}active{% endif %}">
-      <i class="bi bi-calendar-range"></i> Academic Years
+    <div class="nav-section">Communication</div>
+    <a href="{% url 'messaging:list' %}" class="nav-link {% if 'messages' in request.path %}active{% endif %}">
+      <i class="bi bi-chat-left-text"></i> Messages
     </a>
-    <a href="{% url 'academics:teacher_assignment_list' %}" class="nav-link {% if 'assignments' in request.path %}active{% endif %}">
-      <i class="bi bi-person-workspace"></i> Teacher Assignments
+    <a href="{% url 'notifications:announcements' %}" class="nav-link {% if 'announcements' in request.path %}active{% endif %}">
+      <i class="bi bi-megaphone"></i> Announcements
     </a>
-    <a href="{% url 'school_settings' %}" class="nav-link {% if 'settings' in request.path %}active{% endif %}">
-      <i class="bi bi-gear"></i> Settings
-    </a>
-    {% if school_role == 'admin' %}
-    <a href="{% url 'fees:payment_config' %}" class="nav-link {% if 'payment-config' in request.path %}active{% endif %}">
-      <i class="bi bi-credit-card"></i> Payment Config
-    </a>
-    {% endif %}
 
     {% if school_role in 'parent,student' %}
-    <div class="nav-section">My Information</div>
-    {% if school_role == 'student' %}
-    <a href="{% url 'results:result_entry' %}" class="nav-link"><i class="bi bi-award"></i> My Results</a>
-    {% endif %}
+    <div class="nav-section">My Account</div>
     {% if school_role == 'parent' %}
-    <a href="{% url 'academics:teacher_list' %}" class="nav-link {% if 'teachers' in request.path %}active{% endif %}">
-      <i class="bi bi-person-badge"></i> My Students' Teachers
-    </a>
     <a href="{% url 'fees:invoice_list' %}" class="nav-link {% if 'invoices' in request.path %}active{% endif %}">
       <i class="bi bi-receipt"></i> Fee Statements
     </a>
     {% endif %}
     {% endif %}
+
+    <div class="nav-section">Settings</div>
+    <a href="{% url 'academics:academic_year_list' %}" class="nav-link {% if 'years' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-range"></i> Academic Years
+    </a>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'academics:teacher_assignment_list' %}" class="nav-link {% if 'assignments' in request.path %}active{% endif %}">
+      <i class="bi bi-person-workspace"></i> Teacher Assignments
+    </a>
+    {% endif %}
+    {% if school_role == 'admin' %}
+    <a href="{% url 'fees:payment_config' %}" class="nav-link {% if 'payment-config' in request.path %}active{% endif %}">
+      <i class="bi bi-credit-card"></i> Payment Config
+    </a>
+    {% endif %}
+    <a href="{% url 'school_settings' %}" class="nav-link {% if 'settings' in request.path %}active{% endif %}">
+      <i class="bi bi-gear"></i> School Settings
+    </a>
+
+    <a href="{% url 'offline_sync' %}" class="nav-link {% if request.resolver_match.url_name == 'offline_sync' %}active{% endif %}">
+      <i class="bi bi-cloud-arrow-up"></i>
+      <span>Offline Sync</span>
+      <span id="sync-sidebar-badge" class="badge bg-warning text-dark ms-auto d-none" style="font-size: 0.65rem; border-radius: 50px;">0</span>
+    </a>
 
     {% if user.is_superuser %}
     <div class="nav-section">Platform</div>
@@ -565,6 +621,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
       </nav>
     </div>
     <div class="topbar-right">
+        <button class="btn btn-sm btn-light" id="moneyToggleBtn" title="Show/Hide Money Amounts">
+          <i class="bi bi-eye" id="moneyToggleIcon"></i>
+        </button>
         <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-light position-relative" title="Notifications">
         <i class="bi bi-bell"></i>
         <span class="notif-badge" id="notif-count" style="display:none">0</span>
@@ -676,8 +735,53 @@ function loadNotifCount() {
     });
 }
 
+// Sidebar scroll position persistence
+const scrollKey = 'sidebarScrollPosition';
+
+// Save scroll position
+function saveSidebarScroll() {
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    localStorage.setItem(scrollKey, sidebar.scrollTop);
+  }
+}
+
+// Restore scroll position
+function restoreSidebarScroll() {
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    const savedScroll = localStorage.getItem(scrollKey);
+    if (savedScroll) {
+      setTimeout(() => {
+        sidebar.scrollTop = parseInt(savedScroll, 10);
+      }, 250);
+    }
+  }
+}
+
+// Save scroll position before page unloads or when clicking links
+window.addEventListener('beforeunload', saveSidebarScroll);
+
+// Restore scroll position on DOM load and page show (for cached pages)
+document.addEventListener('DOMContentLoaded', () => {
+  // Add click listeners to sidebar links when DOM is ready
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', saveSidebarScroll);
+    });
+  }
+  restoreSidebarScroll();
+});
+
+window.addEventListener('pageshow', (event) => {
+  // pageshow fires even when page is loaded from cache
+  if (event.persisted) {
+    restoreSidebarScroll();
+  }
+});
+
 // Initialize searchable dropdowns
-document.addEventListener('DOMContentLoaded', function() {
     // Hide back button on main dashboard
     const currentPath = window.location.pathname;
     const isDashboard = currentPath === '/analytics/dashboard/' || currentPath === '/school/dashboard/';
@@ -708,6 +812,32 @@ document.addEventListener('DOMContentLoaded', function() {
         loadNotifCount();
         setInterval(loadNotifCount, 60000);
     }
+
+    // Money Amount Toggle
+    const moneyToggleBtn = document.getElementById('moneyToggleBtn');
+    const moneyToggleIcon = document.getElementById('moneyToggleIcon');
+    const body = document.body;
+    
+    // Check saved state in localStorage
+    const moneyHidden = localStorage.getItem('moneyHidden') === 'true';
+    if (moneyHidden) {
+        body.classList.add('money-hidden');
+        moneyToggleIcon.classList.remove('bi-eye');
+        moneyToggleIcon.classList.add('bi-eye-slash');
+    }
+    
+    moneyToggleBtn.addEventListener('click', () => {
+        const isHidden = body.classList.toggle('money-hidden');
+        localStorage.setItem('moneyHidden', isHidden);
+        
+        if (isHidden) {
+            moneyToggleIcon.classList.remove('bi-eye');
+            moneyToggleIcon.classList.add('bi-eye-slash');
+        } else {
+            moneyToggleIcon.classList.remove('bi-eye-slash');
+            moneyToggleIcon.classList.add('bi-eye');
+        }
+    });
 
     // --- Deep Offline Cache Warmer (v24: Queued) ---
     if ('serviceWorker' in navigator && navigator.onLine) {

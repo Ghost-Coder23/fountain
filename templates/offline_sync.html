@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Offline Sync{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-wifi-off me-2"></i>Offline Mode
+    </div>
+    <div class="card-body">
+      <p class="mb-3">
+        Your device appears to be offline. Actions may be queued and then synced automatically when
+        connectivity returns.
+      </p>
+
+      <div class="alert alert-warning mb-3" role="alert">
+        <strong>Note:</strong> For best results, keep this page open until the sync completes.
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" id="offline-sync-now" class="btn btn-primary">
+          Sync Now
+        </button>
+        <a class="btn btn-outline-secondary" href="{% url 'fees:invoice_list' %}">Back to Invoices</a>
+      </div>
+
+      <hr>
+
+      <div class="small text-muted">
+        <div>Last status: <span id="offline-sync-status">—</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const statusEl = document.getElementById('offline-sync-status');
+    const btn = document.getElementById('offline-sync-now');
+
+    function setStatus(text) {
+      if (statusEl) statusEl.textContent = text;
+    }
+
+    async function requestSync() {
+      setStatus('Requesting sync…');
+
+      try {
+        // If the existing app uses an offline queue (e.g. via service worker / IndexedDB),
+        // this endpoint can be handled server-side OR by client-side code.
+        const res = await fetch('/offline/sync/', { method: 'POST' });
+        if (!res.ok) throw new Error('Sync request failed');
+        setStatus('Sync requested. You may refresh to see updates.');
+      } catch (e) {
+        // Fallback: still update UI so user gets feedback.
+        setStatus('Could not sync now (offline). Will retry when online.');
+      }
+    }
+
+    if (btn) btn.addEventListener('click', requestSync);
+
+    // Attempt auto sync when coming online.
+    window.addEventListener('online', () => {
+      setStatus('Back online. Syncing…');
+      requestSync();
+    });
+
+    setStatus(navigator.onLine ? 'Online' : 'Offline');
+  })();
+</script>
+{% endblock %}
+

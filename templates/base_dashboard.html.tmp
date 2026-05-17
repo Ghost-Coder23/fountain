@@ -1,0 +1,124 @@
+  <nav class="py-2">
+    <a href="{% url 'analytics:dashboard' %}" class="nav-link {% if request.path == '/analytics/dashboard/' %}active{% endif %}">
+      <i class="bi bi-house-door"></i> Dashboard
+    </a>
+
+    {% if school_role in 'headmaster,teacher,admin' %}
+    <div class="nav-section">Academics</div>
+    <a href="{% url 'academics:student_list' %}" class="nav-link {% if 'students' in request.path %}active{% endif %}">
+      <i class="bi bi-people"></i> Students
+    </a>
+    <a href="{% url 'academics:teacher_list' %}" class="nav-link {% if 'teachers' in request.path %}active{% endif %}">
+      <i class="bi bi-person-badge"></i> Teachers
+    </a>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'academics:parent_list' %}" class="nav-link {% if 'parents' in request.path %}active{% endif %}">
+      <i class="bi bi-person-heart"></i> Parents
+    </a>
+    {% endif %}
+    <a href="{% url 'academics:class_section_list' %}" class="nav-link {% if 'sections' in request.path %}active{% endif %}">
+      <i class="bi bi-building"></i> Classes
+    </a>
+    <a href="{% url 'academics:subject_list' %}" class="nav-link {% if 'subjects' in request.path %}active{% endif %}">
+      <i class="bi bi-book"></i> Subjects
+    </a>
+    <a href="{% url 'timetable:dashboard' %}" class="nav-link {% if 'timetable' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-week"></i> Timetables
+    </a>
+
+    <div class="nav-section">Attendance</div>
+    <a href="{% url 'attendance:home' %}" class="nav-link {% if 'attendance' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-check"></i> Mark Attendance
+    </a>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'attendance:report' %}" class="nav-link {% if 'report' in request.path %}active{% endif %}">
+      <i class="bi bi-bar-chart"></i> Attendance Reports
+    </a>
+    {% endif %}
+
+    <div class="nav-section">Results</div>
+    {% if school_role in 'headmaster,teacher' %}
+    <a href="{% url 'results:result_entry' %}" class="nav-link {% if 'entry' in request.path %}active{% endif %}">
+      <i class="bi bi-pencil-square"></i> Enter Results
+    </a>
+    {% endif %}
+    <a href="{% url 'results:student_results' %}" class="nav-link {% if 'student_results' in request.path %}active{% endif %}">
+      <i class="bi bi-award"></i> View Results
+    </a>
+    {% if school_role == 'headmaster' %}
+    <a href="{% url 'results:student_proceed' %}" class="nav-link {% if 'proceed' in request.path %}active{% endif %}">
+      <i class="bi bi-arrow-up-circle"></i> Promote Students
+    </a>
+    {% endif %}
+    <a href="{% url 'results:term_list' %}" class="nav-link {% if 'terms' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar3"></i> Terms
+    </a>
+    {% endif %}
+
+    {% if school_role == 'admin' %}
+    <div class="nav-section">Finance</div>
+    <a href="{% url 'fees:home' %}" class="nav-link {% if 'fees' in request.path %}active{% endif %}">
+      <i class="bi bi-cash-stack"></i> Finance Dashboard
+    </a>
+    <a href="{% url 'fees:invoice_list' %}" class="nav-link {% if 'invoices' in request.path %}active{% endif %}">
+      <i class="bi bi-receipt"></i> Invoices
+    </a>
+    <a href="{% url 'fees:expense_list' %}" class="nav-link {% if 'expenses' in request.path %}active{% endif %}">
+      <i class="bi bi-dash-circle"></i> Expenses
+    </a>
+    <a href="{% url 'fees:structure_list' %}" class="nav-link {% if 'structures' in request.path %}active{% endif %}">
+      <i class="bi bi-list-check"></i> Fee Structures
+    </a>
+    {% endif %}
+
+    <div class="nav-section">Communication</div>
+    <a href="{% url 'messaging:list' %}" class="nav-link {% if 'messages' in request.path %}active{% endif %}">
+      <i class="bi bi-chat-left-text"></i> Messages
+    </a>
+    <a href="{% url 'notifications:announcements' %}" class="nav-link {% if 'announcements' in request.path %}active{% endif %}">
+      <i class="bi bi-megaphone"></i> Announcements
+    </a>
+
+    {% if school_role in 'parent,student' %}
+    <div class="nav-section">My Account</div>
+    {% if school_role == 'student' %}
+    <a href="{% url 'results:student_results' 0 %}" class="nav-link"><i class="bi bi-award"></i> My Results</a>
+    {% endif %}
+    {% if school_role == 'parent' %}
+    <a href="{% url 'fees:invoice_list' %}" class="nav-link {% if 'invoices' in request.path %}active{% endif %}">
+      <i class="bi bi-receipt"></i> Fee Statements
+    </a>
+    {% endif %}
+    {% endif %}
+
+    <div class="nav-section">Settings</div>
+    <a href="{% url 'academics:academic_year_list' %}" class="nav-link {% if 'years' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-range"></i> Academic Years
+    </a>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'academics:teacher_assignment_list' %}" class="nav-link {% if 'assignments' in request.path %}active{% endif %}">
+      <i class="bi bi-person-workspace"></i> Teacher Assignments
+    </a>
+    {% endif %}
+    {% if school_role == 'admin' %}
+    <a href="{% url 'fees:payment_config' %}" class="nav-link {% if 'payment-config' in request.path %}active{% endif %}">
+      <i class="bi bi-credit-card"></i> Payment Config
+    </a>
+    {% endif %}
+    <a href="{% url 'school_settings' %}" class="nav-link {% if 'settings' in request.path %}active{% endif %}">
+      <i class="bi bi-gear"></i> School Settings
+    </a>
+
+    <a href="{% url 'offline_sync' %}" class="nav-link {% if request.resolver_match.url_name == 'offline_sync' %}active{% endif %}">
+      <i class="bi bi-cloud-arrow-up"></i>
+      <span>Offline Sync</span>
+      <span id="sync-sidebar-badge" class="badge bg-warning text-dark ms-auto d-none" style="font-size: 0.65rem; border-radius: 50px;">0</span>
+    </a>
+
+    {% if user.is_superuser %}
+    <div class="nav-section">Platform</div>
+    <a href="{% url 'superadmin:dashboard' %}" class="nav-link {% if 'platform' in request.path %}active{% endif %}">
+      <i class="bi bi-globe"></i> Superadmin
+    </a>
+    {% endif %}
+  </nav>

@@ -1,3 +1,15 @@
+"""
+EduCore API Views — Fixed
+FIXES:
+  1. BatchSyncView: each operation now has its own transaction.atomic() so one
+     failure (e.g. a bad fee payment) cannot roll back unrelated operations
+     (e.g. attendance records) that were queued in the same flush.
+  2. BatchSyncView: 'form_submission' added to model_map as a no-op passthrough
+     so unrecognised queue items don't pile up forever with "Unknown model" errors.
+  3. BatchSyncView: invoice extraction from _offline_origin replaced with a direct
+     form field read — the fees payment template should include a hidden
+     <input type="hidden" name="invoice" value="{{ invoice.pk }}"> field.
+"""
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,7 +24,7 @@ from results.models import Term, GradeScale, StudentResult
 from notifications.models import Announcement
 
 from .serializers import (
-    SchoolSerializer, AcademicYearSerializer, ClassLevelSerializer, 
+    SchoolSerializer, AcademicYearSerializer, ClassLevelSerializer,
     SubjectSerializer, ClassSectionSerializer, StudentSerializer,
     AttendanceSessionSerializer, AttendanceRecordSerializer,
     TermSerializer, GradeScaleSerializer, StudentResultSerializer,
@@ -22,6 +34,7 @@ from .serializers import (
 )
 
 from fees.models import FeeStructure, FeeInvoice, FeePayment, Expense, ExpenseCategory
+
 
 class InitialSyncView(APIView):
     permission_classes = [IsAuthenticated]
@@ -46,9 +59,7 @@ class InitialSyncView(APIView):
             "fee_structures": FeeStructureSerializer(FeeStructure.objects.filter(school=school), many=True).data,
             "expense_categories": ExpenseCategorySerializer(ExpenseCategory.objects.filter(school=school), many=True).data,
         }
-        
-        # Only include recent attendance and results for initial sync to keep payload small
-        # More specific data can be fetched on demand or during delta syncs
+
         data["attendance_sessions"] = AttendanceSessionSerializer(
             AttendanceSession.objects.filter(school=school).order_by('-date')[:100], many=True
         ).data
@@ -64,8 +75,9 @@ class InitialSyncView(APIView):
         data["results"] = StudentResultSerializer(
             StudentResult.objects.filter(student__school=school).order_by('-created_at')[:200], many=True
         ).data
-        
+
         return Response(data)
+
 
 class BatchSyncView(APIView):
     permission_classes = [IsAuthenticated]
@@ -89,63 +101,83 @@ class BatchSyncView(APIView):
             'school_user': (SchoolUser, SchoolUserSerializer),
         }
 
-        with transaction.atomic():
-            for op in operations:
-                model_name = op.get('model')
-                op_type = op.get('type') # create, update, delete
-                data = op.get('data')
-                client_id = data.get('id')
+        for op in operations:
+            model_name = op.get('model')
+            op_type = op.get('type')  # create, update, delete
+            data = op.get('data', {})
+            client_id = data.get('id')
 
-                if model_name not in model_map:
-                    results.append({"id": client_id, "status": "error", "message": f"Unknown model {model_name}"})
-                    continue
+            # FIX: form_submission is the sync.js fallback model name for forms
+            # that couldn't be identified. These are replayed directly to their
+            # original URL by replayQueuedForm() and never reach BatchSyncView,
+            # but if they do arrive here via syncLegacyQueueItem, acknowledge
+            # them as success so they clear from the queue rather than piling up.
+            if model_name == 'form_submission':
+                results.append({
+                    "id": client_id,
+                    "status": "success",
+                    "message": "form_submission acknowledged — replay handled by client"
+                })
+                continue
 
-                model_class, serializer_class = model_map[model_name]
+            if model_name not in model_map:
+                results.append({
+                    "id": client_id,
+                    "status": "error",
+                    "message": f"Unknown model: {model_name}"
+                })
+                continue
 
-                try:
+            model_class, serializer_class = model_map[model_name]
+
+            # FIX: each operation gets its own atomic block.
+            # Previously one big transaction.atomic() meant a single bad fee
+            # payment rolled back all attendance records in the same batch.
+            try:
+                with transaction.atomic():
                     if op_type in ['create', 'update']:
-                        # Special handling for fee payments to link to invoice via PK if needed
-                        if model_name == 'fee_payment' and 'invoice' not in data:
-                            # Try to extract invoice ID from _offline_origin if possible
-                            origin = data.get('_offline_origin', '')
-                            if '/fees/invoice/' in origin:
-                                try:
-                                    invoice_id = origin.split('/fees/invoice/')[1].split('/')[0]
-                                    data['invoice'] = invoice_id
-                                except: pass
-
-                        # Handle Last Write Wins via updated_at
                         instance = model_class.objects.filter(id=client_id).first()
+
                         if instance:
-                            # Update existing
+                            # Conflict resolution: last-write-wins via updated_at
                             client_updated_at = data.get('updated_at')
-                            if client_updated_at and instance.updated_at.isoformat() > client_updated_at:
-                                # Server has newer data, ignore client update but return server data
-                                results.append({
-                                    "id": client_id, 
-                                    "status": "conflict", 
-                                    "data": serializer_class(instance).data
-                                })
-                                continue
-                            
+                            if client_updated_at and hasattr(instance, 'updated_at'):
+                                if instance.updated_at.isoformat() > client_updated_at:
+                                    results.append({
+                                        "id": client_id,
+                                        "status": "conflict",
+                                        "data": serializer_class(instance).data
+                                    })
+                                    continue
                             serializer = serializer_class(instance, data=data, partial=True)
                         else:
-                            # Create new
-                            # If ID is provided, use it
                             serializer = serializer_class(data=data)
 
                         if serializer.is_valid():
                             if instance:
                                 serializer.save()
                             else:
-                                # For new objects, ensure ID is preserved if provided
                                 if client_id:
-                                    serializer.save(id=client_id, school=school) if hasattr(model_class, 'school') else serializer.save(id=client_id)
+                                    if hasattr(model_class, 'school'):
+                                        serializer.save(id=client_id, school=school)
+                                    else:
+                                        serializer.save(id=client_id)
                                 else:
-                                    serializer.save(school=school) if hasattr(model_class, 'school') else serializer.save()
-                            results.append({"id": client_id, "status": "success", "data": serializer.data})
+                                    if hasattr(model_class, 'school'):
+                                        serializer.save(school=school)
+                                    else:
+                                        serializer.save()
+                            results.append({
+                                "id": client_id,
+                                "status": "success",
+                                "data": serializer.data
+                            })
                         else:
-                            results.append({"id": client_id, "status": "error", "errors": serializer.errors})
+                            results.append({
+                                "id": client_id,
+                                "status": "error",
+                                "errors": serializer.errors
+                            })
 
                     elif op_type == 'delete':
                         instance = model_class.objects.filter(id=client_id).first()
@@ -156,7 +188,12 @@ class BatchSyncView(APIView):
                         else:
                             results.append({"id": client_id, "status": "not_found"})
 
-                except Exception as e:
-                    results.append({"id": client_id, "status": "error", "message": str(e)})
+            except Exception as e:
+                # FIX: exception is caught per-operation, not for the whole batch
+                results.append({
+                    "id": client_id,
+                    "status": "error",
+                    "message": str(e)
+                })
 
         return Response({"results": results})

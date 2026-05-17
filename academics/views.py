@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
 
-from core.utils import SchoolRoleMixin, send_welcome_email
+from core.utils import SchoolRoleMixin, send_welcome_email, export_to_excel, export_to_csv
 from .models import AcademicYear, ClassLevel, Subject, ClassSection, Student, TeacherSubjectAssignment
 from .forms import AcademicYearForm, ClassLevelForm, SubjectForm, ClassSectionForm, StudentForm, TeacherForm, TeacherAssignmentForm
 from schools.models import SchoolUser
@@ -597,3 +597,51 @@ class TeacherDeleteView(DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Teacher deleted successfully!')
         return super().delete(request, *args, **kwargs)
+
+
+# Export Views
+@login_required
+def export_students(request, format='excel'):
+    """Export students to Excel or CSV"""
+    queryset = Student.objects.filter(school=request.school).select_related('user', 'current_class')
+    
+    # Apply same filters as student list
+    class_id = request.GET.get('class')
+    if class_id:
+        queryset = queryset.filter(current_class_id=class_id)
+    
+    search = request.GET.get('search')
+    if search:
+        queryset = queryset.filter(
+            user__first_name__icontains=search
+        ) | queryset.filter(
+            user__last_name__icontains=search
+        ) | queryset.filter(
+            admission_number__icontains=search
+        )
+    
+    # Prepare data
+    headers = [
+        'First Name', 'Last Name', 'Email', 'Admission Number', 
+        'Class', 'Gender', 'Parent Name', 'Parent Phone', 'Date of Birth'
+    ]
+    data = []
+    for student in queryset:
+        data.append([
+            student.user.first_name,
+            student.user.last_name,
+            student.user.email,
+            student.admission_number,
+            str(student.current_class) if student.current_class else '',
+            student.get_gender_display(),
+            student.parent_name or '',
+            student.parent_phone or '',
+            student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else ''
+        ])
+    
+    filename = f"students_{request.school.name.replace(' ', '_')}.xlsx" if format == 'excel' else f"students_{request.school.name.replace(' ', '_')}.csv"
+    
+    if format == 'excel':
+        return export_to_excel(data, headers, filename)
+    else:
+        return export_to_csv(data, headers, filename)

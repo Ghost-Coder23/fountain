@@ -30,6 +30,27 @@ class Term(SyncBaseModel):
         return f"{self.name} - {self.academic_year.name}"
 
 
+class AssessmentComponent(SyncBaseModel):
+    """Assessment component (CA, Exam, Project, etc.) for a school or subject"""
+    school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='assessment_components')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='assessment_components', null=True, blank=True, help_text='Leave blank for school-wide component')
+    name = models.CharField(max_length=100)
+    weight = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)], help_text='Percentage weight')
+    order = models.IntegerField(default=0, help_text='Display order')
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        ordering = ['order', 'name']
+        unique_together = ['school', 'subject', 'name']
+
+    def __str__(self):
+        if self.subject:
+            return f"{self.name} ({self.subject.name} - {self.weight}%)"
+        return f"{self.name} ({self.weight}%)"
+
+
 class GradeScale(SyncBaseModel):
     """Grading scale for a school"""
     school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='grade_scales')
@@ -48,6 +69,22 @@ class GradeScale(SyncBaseModel):
         return f"{self.grade} ({self.min_score}-{self.max_score})"
 
 
+class StudentResultComponent(SyncBaseModel):
+    """Score for a specific assessment component in a student result"""
+    student_result = models.ForeignKey('StudentResult', on_delete=models.CASCADE, related_name='components')
+    component = models.ForeignKey(AssessmentComponent, on_delete=models.CASCADE, related_name='student_scores')
+    score = models.FloatField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ['student_result', 'component']
+
+    def __str__(self):
+        return f"{self.student_result} - {self.component.name}: {self.score}"
+
+
 class StudentResult(SyncBaseModel):
     """Student marks for a specific subject and term"""
     STATUS_CHOICES = [
@@ -62,7 +99,7 @@ class StudentResult(SyncBaseModel):
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='student_results', db_index=True)
     class_section = models.ForeignKey(ClassSection, on_delete=models.CASCADE, related_name='results', db_index=True)
 
-    # Assessment components (customizable per school)
+    # Legacy fields for backward compatibility
     continuous_assessment = models.FloatField(
         default=0, 
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -108,34 +145,48 @@ class StudentResult(SyncBaseModel):
     def __str__(self):
         return f"{self.student} - {self.subject} - {self.term}"
 
+    def get_assessment_components(self):
+        """Get the assessment components applicable to this result's subject"""
+        school = self.class_section.school
+        
+        # First check if subject has its own components
+        subject_components = AssessmentComponent.objects.filter(school=school, subject=self.subject)
+        if subject_components.exists():
+            return subject_components
+        
+        # Otherwise use school-wide components
+        return AssessmentComponent.objects.filter(school=school, subject__isnull=True)
+
     def calculate_total(self):
         """Calculate total score based on school's selected grading system"""
         school = self.class_section.school
         
-        if school.grading_system == 'system':
-            # System Default: 30% CA, 70% Exam
-            ca_weight = 0.3
-            exam_weight = 0.7
+        if school.grading_system in ['multiple_components', 'subject_specific']:
+            # Use multiple assessment components
+            components = self.get_assessment_components()
+            total = 0.0
+            
+            for component in components:
+                # Get or create the component score
+                comp_result, _ = StudentResultComponent.objects.get_or_create(
+                    student_result=self,
+                    component=component,
+                    defaults={'score': 0}
+                )
+                total += (comp_result.score * (component.weight / 100.0))
+            
+            self.total_score = total
         elif school.grading_system == 'custom_weights':
             # Custom CA/Exam Weights
             ca_weight = school.ca_weight / 100.0
             exam_weight = school.exam_weight / 100.0
-        elif school.grading_system == 'multiple_components':
-            # TODO: Implement multiple assessment components
-            # For now, fall back to custom weights
-            ca_weight = school.ca_weight / 100.0
-            exam_weight = school.exam_weight / 100.0
-        elif school.grading_system == 'subject_specific':
-            # TODO: Implement subject-specific grading
-            # For now, fall back to custom weights
-            ca_weight = school.ca_weight / 100.0
-            exam_weight = school.exam_weight / 100.0
+            self.total_score = (self.continuous_assessment * ca_weight) + (self.exam_score * exam_weight)
         else:
-            # Fallback to system default
+            # System Default: 30% CA, 70% Exam
             ca_weight = 0.3
             exam_weight = 0.7
+            self.total_score = (self.continuous_assessment * ca_weight) + (self.exam_score * exam_weight)
         
-        self.total_score = (self.continuous_assessment * ca_weight) + (self.exam_score * exam_weight)
         return self.total_score
 
     def assign_grade(self, grade_scales):

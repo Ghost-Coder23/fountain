@@ -293,13 +293,13 @@
           <div class="row g-2 mb-3">
             <div class="col-3">
               <div class="mini-metric">
-                <div class="mini-value text-success">${{ total_paid|floatformat:2 }}</div>
+                <div class="mini-value text-success"><span class="money-amount">${{ total_paid|floatformat:2 }}</span></div>
                 <div class="mini-label">Collected</div>
               </div>
             </div>
             <div class="col-3">
               <div class="mini-metric">
-                <div class="mini-value text-danger">${{ outstanding|floatformat:2 }}</div>
+                <div class="mini-value text-danger"><span class="money-amount">${{ outstanding|floatformat:2 }}</span></div>
                 <div class="mini-label">Outstanding</div>
               </div>
             </div>
@@ -434,7 +434,7 @@
         <div class="card-body text-center">
           <canvas id="feeChart" style="max-height: 200px;"></canvas>
           <div class="mt-3">
-            <h6 class="mb-0 fw-bold">${{ total_paid|floatformat:0 }}</h6>
+            <h6 class="mb-0 fw-bold"><span class="money-amount">${{ total_paid|floatformat:0 }}</span></h6>
             <small class="text-muted">Total Collected This Term</small>
           </div>
         </div>
@@ -531,7 +531,7 @@
               {% for inv in recent_invoices %}
               <tr>
                 <td><a href="{% url 'fees:invoice_detail' inv.pk %}">{{ inv.student.user.get_full_name }}</a></td>
-                <td>{{ inv.currency }} {{ inv.amount }}</td>
+                <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
                 <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ inv.get_status_display }}</span></td>
               </tr>
               {% empty %}
@@ -555,7 +555,7 @@
               {% for pay in recent_payments %}
               <tr>
                 <td><a href="{% url 'fees:invoice_detail' pay.invoice.pk %}">{{ pay.invoice.student.user.get_full_name }}</a></td>
-                <td>{{ pay.currency }} {{ pay.amount }}</td>
+                <td><span class="money-amount">{{ pay.currency }} {{ pay.amount }}</span></td>
                 <td><span class="badge {% if pay.status == 'confirmed' %}bg-success{% elif pay.status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ pay.get_method_display }}</span></td>
               </tr>
               {% empty %}

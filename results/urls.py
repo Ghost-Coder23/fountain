@@ -16,6 +16,12 @@ urlpatterns = [
     path('grade-scales/<uuid:pk>/edit/', views.GradeScaleUpdateView.as_view(), name='grade_scale_edit'),
     path('grade-scales/<uuid:pk>/delete/', views.GradeScaleDeleteView.as_view(), name='grade_scale_delete'),
 
+    # Assessment Components
+    path('assessment-components/', views.AssessmentComponentListView.as_view(), name='assessment_component_list'),
+    path('assessment-components/add/', views.AssessmentComponentCreateView.as_view(), name='assessment_component_add'),
+    path('assessment-components/<uuid:pk>/edit/', views.AssessmentComponentUpdateView.as_view(), name='assessment_component_edit'),
+    path('assessment-components/<uuid:pk>/delete/', views.AssessmentComponentDeleteView.as_view(), name='assessment_component_delete'),
+
     # Result Entry
     path('entry/', views.ResultEntryView.as_view(), name='result_entry'),
 

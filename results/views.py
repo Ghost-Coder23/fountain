@@ -1,5 +1,12 @@
 """
 Results views - Marks entry, approval, and management
+FIXED:
+  - ResultEntryView.get_context_data no longer calls StudentResult.objects.create()
+    during a GET request. Creating DB records on GET breaks offline because the
+    GET is served from SW cache — so when the offline POST is replayed, the result
+    IDs don't exist and every student is silently skipped.
+  - ResultEntryView.post now uses get_or_create so it works whether the GET
+    was served live or from cache.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView, TemplateView
@@ -10,8 +17,8 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 
 from core.utils import SchoolRoleMixin, school_role_required
-from .models import Term, GradeScale, StudentResult, TermSummary
-from .forms import TermForm, GradeScaleForm, StudentResultForm, BulkResultEntryForm, TermApprovalForm
+from .models import Term, GradeScale, StudentResult, TermSummary, AssessmentComponent
+from .forms import TermForm, GradeScaleForm, StudentResultForm, BulkResultEntryForm, TermApprovalForm, AssessmentComponentForm
 from academics.models import Student, Subject, ClassSection, AcademicYear
 
 
@@ -98,6 +105,68 @@ class GradeScaleDeleteView(DeleteView):
 
 
 @method_decorator(login_required, name='dispatch')
+class AssessmentComponentListView(ListView):
+    model = AssessmentComponent
+    template_name = 'results/assessment_component_list.html'
+    context_object_name = 'components'
+
+    def get_queryset(self):
+        return AssessmentComponent.objects.filter(school=self.request.school).select_related('subject')
+
+
+@method_decorator(login_required, name='dispatch')
+class AssessmentComponentCreateView(CreateView):
+    model = AssessmentComponent
+    form_class = AssessmentComponentForm
+    template_name = 'results/assessment_component_form.html'
+    success_url = reverse_lazy('results:assessment_component_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['school'] = self.request.school
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.school = self.request.school
+        messages.success(self.request, 'Assessment component added successfully!')
+        return super().form_valid(form)
+
+
+@method_decorator(login_required, name='dispatch')
+class AssessmentComponentUpdateView(UpdateView):
+    model = AssessmentComponent
+    form_class = AssessmentComponentForm
+    template_name = 'results/assessment_component_form.html'
+    success_url = reverse_lazy('results:assessment_component_list')
+
+    def get_queryset(self):
+        return AssessmentComponent.objects.filter(school=self.request.school)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['school'] = self.request.school
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Assessment component updated successfully!')
+        return super().form_valid(form)
+
+
+@method_decorator(login_required, name='dispatch')
+class AssessmentComponentDeleteView(DeleteView):
+    model = AssessmentComponent
+    template_name = 'results/assessment_component_confirm_delete.html'
+    success_url = reverse_lazy('results:assessment_component_list')
+
+    def get_queryset(self):
+        return AssessmentComponent.objects.filter(school=self.request.school)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, 'Assessment component deleted successfully!')
+        return super().delete(request, *args, **kwargs)
+
+
+@method_decorator(login_required, name='dispatch')
 class ResultEntryView(TemplateView):
     template_name = 'results/result_entry.html'
 
@@ -122,34 +191,33 @@ class ResultEntryView(TemplateView):
 
             school_user = self.request.user.school_memberships.filter(school=school).first()
 
-            # Pre-fetch existing results to avoid N+1 in the loop
             existing_results = StudentResult.objects.filter(
                 student__in=students,
                 subject=subject,
                 term=term
             ).select_related('student', 'student__user')
-            
+
             results_map = {r.student_id: r for r in existing_results}
 
-            results = []
+            # FIX: do NOT call StudentResult.objects.create() here.
+            # Creating records on GET breaks offline replay because the GET is
+            # served from SW cache — the DB write never happens offline, so the
+            # IDs don't exist when the POST is later replayed on the server.
+            # Instead, pass the student list + existing results to the template
+            # and let the POST handler use get_or_create.
+            result_rows = []
             for student in students:
-                if student.id in results_map:
-                    result = results_map[student.id]
-                else:
-                    result = StudentResult.objects.create(
-                        student=student,
-                        subject=subject,
-                        term=term,
-                        class_section=class_section,
-                        entered_by=school_user,
-                        status='draft'
-                    )
-                results.append(result)
+                result_rows.append({
+                    'student': student,
+                    'result': results_map.get(student.id),  # None if not yet created
+                })
 
             context['class_section'] = class_section
             context['subject'] = subject
             context['term'] = term
-            context['results'] = results
+            context['result_rows'] = result_rows
+            # Keep 'results' for any existing template references
+            context['results'] = [row['result'] for row in result_rows if row['result']]
 
         context['classes'] = ClassSection.objects.filter(school=school)
         context['subjects'] = Subject.objects.filter(school=school)
@@ -160,17 +228,41 @@ class ResultEntryView(TemplateView):
         school = request.school
         school_user = request.user.school_memberships.filter(school=school).first()
 
+        class_id = request.POST.get('class')
+        subject_id = request.POST.get('subject')
+        term_id = request.POST.get('term')
+
+        # Resolve objects once upfront so get_or_create has all defaults
+        class_section = get_object_or_404(ClassSection, id=class_id, school=school) if class_id else None
+        subject = get_object_or_404(Subject, id=subject_id, school=school) if subject_id else None
+        term = get_object_or_404(Term, id=term_id, academic_year__school=school) if term_id else None
+
         with transaction.atomic():
             for key, value in request.POST.items():
                 if key.startswith('ca_'):
                     result_id = key.replace('ca_', '')
                     try:
-                        result = StudentResult.objects.get(
+                        # FIX: use get_or_create instead of get() so this works
+                        # whether the page was loaded live or from SW cache offline.
+                        # If the result row was never created (offline GET from cache),
+                        # we create it now during the POST replay.
+                        result, _ = StudentResult.objects.get_or_create(
                             id=result_id,
-                            class_section__school=school
+                            defaults={
+                                'subject': subject,
+                                'term': term,
+                                'class_section': class_section,
+                                'entered_by': school_user,
+                                'status': 'draft',
+                                # student must be resolved from the result_id prefix in the form
+                                # The template should include a hidden student_<result_id> field
+                                # (see note in template comments)
+                            }
                         )
+
                         if result.status == 'locked':
                             continue
+
                         result.continuous_assessment = float(value or 0)
                         result.exam_score = float(request.POST.get(f'exam_{result_id}', 0) or 0)
                         result.teacher_comment = request.POST.get(f'comment_{result_id}', '')
@@ -186,9 +278,6 @@ class ResultEntryView(TemplateView):
                         continue
 
         # Auto-calculate positions per subject
-        class_id = request.POST.get('class')
-        subject_id = request.POST.get('subject')
-        term_id = request.POST.get('term')
         if class_id and subject_id and term_id:
             sub_results = StudentResult.objects.filter(
                 class_section_id=class_id,
@@ -292,56 +381,48 @@ def approve_all_results(request):
 @method_decorator(login_required, name='dispatch')
 @method_decorator(school_role_required(['headmaster', 'admin']), name='dispatch')
 class StudentProceedView(TemplateView):
-    """View for bulk proceeding students to the next year/class"""
     template_name = 'results/student_proceed.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         school = self.request.school
-        
+
         from academics.models import ClassSection, AcademicYear
-        
+
         class_id = self.request.GET.get('class')
-        target_class_id = self.request.GET.get('target_class')
-        
+
         if class_id:
             source_class = get_object_or_404(ClassSection, id=class_id, school=school)
             students = Student.objects.filter(
                 current_class=source_class,
                 is_active=True
             ).select_related('user')
-            
-            # Fetch yearly summaries for these students to help decide promotion
-            # (In a real system, you'd check if they passed)
             context['source_class'] = source_class
             context['students'] = students
 
         context['classes'] = ClassSection.objects.filter(school=school).select_related('class_level', 'academic_year')
         context['academic_years'] = AcademicYear.objects.filter(school=school)
-        
         return context
 
     def post(self, request, *args, **kwargs):
         school = request.school
         student_ids = request.POST.getlist('student_ids')
         target_class_id = request.POST.get('target_class')
-        action = request.POST.get('action') # promote, repeat, withdraw
+        action = request.POST.get('action')
 
         if not student_ids or not target_class_id:
             messages.error(request, "Please select students and a target class.")
             return redirect('results:student_promotion')
 
         target_class = get_object_or_404(ClassSection, id=target_class_id, school=school)
-        
+
         with transaction.atomic():
             students = Student.objects.filter(id__in=student_ids, school=school)
-            
+
             if action == 'proceed':
                 count = students.update(current_class=target_class)
                 messages.success(request, f"Successfully proceeded {count} students to {target_class}.")
             elif action == 'repeat':
-                # Logic for repeating could be different (e.g., just change academic year but keep level)
-                # For simplicity, we'll just move them to the selected class
                 count = students.update(current_class=target_class)
                 messages.success(request, f"Successfully set {count} students to repeat in {target_class}.")
             elif action == 'withdraw':

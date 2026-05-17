@@ -37,9 +37,24 @@
             <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
         </form>
     </div>
-    <a href="{% url 'academics:student_add' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-person-plus me-1"></i>Add Student
-    </a>
+    <div class="d-flex gap-2">
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'academics:export_students' 'excel' %}?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.class %}class={{ request.GET.class }}{% endif %}">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Export to Excel
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'academics:export_students' 'csv' %}?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.class %}class={{ request.GET.class }}{% endif %}">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
+                </a></li>
+            </ul>
+        </div>
+        <a href="{% url 'academics:student_add' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i>Add Student
+        </a>
+    </div>
 </div>
 
 <div class="card">

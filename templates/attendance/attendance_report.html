@@ -42,7 +42,22 @@
 
 {% if sessions %}
 <div class="card">
-  <div class="card-header">Attendance Matrix — {{ sessions|length }} sessions</div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Attendance Matrix — {{ sessions|length }} sessions</span>
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-download me-1"></i>Export
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="{% url 'attendance:export_attendance' 'excel' %}?{% if selected_class %}class={{ selected_class }}&{% endif %}month={{ month }}&year={{ year }}">
+          <i class="bi bi-file-earmark-excel me-2"></i>Export to Excel
+        </a></li>
+        <li><a class="dropdown-item" href="{% url 'attendance:export_attendance' 'csv' %}?{% if selected_class %}class={{ selected_class }}&{% endif %}month={{ month }}&year={{ year }}">
+          <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export to CSV
+        </a></li>
+      </ul>
+    </div>
+  </div>
   <div class="card-body p-0" style="overflow-x:auto;">
     <table class="table table-sm table-bordered mb-0" style="font-size:.78rem;">
       <thead>

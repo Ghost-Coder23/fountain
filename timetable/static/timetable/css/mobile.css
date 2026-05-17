@@ -5,6 +5,7 @@
   .card-header { padding: 12px 14px !important; flex-direction: column; align-items: flex-start !important; gap: 10px; }
   .topbar { padding: 12px 14px !important; }
   .topbar-title { font-size: 1rem !important; }
+  .topbar-actions { flex-wrap: wrap; gap: 8px; }
 
   /* Table cells should be more compact */
   th, td { padding: 10px 10px !important; }
@@ -17,7 +18,16 @@
 
   /* Timetable view table: let it scroll horizontally without shrinking text too much */
   .timetable-grid { -webkit-overflow-scrolling: touch; }
-  .tt-table { min-width: 640px; }
+  .tt-table { min-width: 800px; }
+
+  /* Timetable cells on mobile */
+  .tt-cell { padding: 4px 6px !important; }
+  .tt-subject { font-size: .75rem !important; }
+  .tt-detail { font-size: .68rem !important; }
+  .tt-period-col { padding: 6px 8px !important; min-width: 90px !important; }
+  .tt-period-label { font-size: .75rem !important; }
+  .tt-period-time { font-size: .68rem !important; }
+  .tt-table td { min-width: 110px !important; }
 }
 
 /* Extra-small devices */
@@ -25,6 +35,7 @@
   .stats-grid { grid-template-columns: 1fr !important; }
   .form-control { font-size: 0.95rem; }
   .content { padding: 12px !important; }
-  .tt-table { min-width: 580px; }
+  .tt-table { min-width: 750px !important; }
+  .topbar-actions .btn-sm { font-size: .75rem !important; padding: 4px 8px !important; }
 }
 

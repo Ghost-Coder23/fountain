@@ -1,6 +1,6 @@
 """Results forms"""
 from django import forms
-from .models import Term, GradeScale, StudentResult, TermSummary
+from .models import Term, GradeScale, StudentResult, TermSummary, AssessmentComponent
 
 
 class TermForm(forms.ModelForm):
@@ -17,6 +17,20 @@ class GradeScaleForm(forms.ModelForm):
     class Meta:
         model = GradeScale
         fields = ['grade', 'min_score', 'max_score', 'description']
+
+
+class AssessmentComponentForm(forms.ModelForm):
+    class Meta:
+        model = AssessmentComponent
+        fields = ['name', 'subject', 'weight', 'order']
+        
+    def __init__(self, *args, **kwargs):
+        school = kwargs.pop('school', None)
+        super().__init__(*args, **kwargs)
+        if school:
+            from academics.models import Subject
+            self.fields['subject'].queryset = Subject.objects.filter(school=school)
+            self.fields['subject'].required = False
 
 
 class StudentResultForm(forms.ModelForm):

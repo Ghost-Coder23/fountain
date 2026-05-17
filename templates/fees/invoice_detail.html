@@ -16,10 +16,12 @@
       <div class="card-body">
         <dl class="row mb-0" style="font-size:.88rem;">
           <dt class="col-5">Student</dt><dd class="col-7">{{ invoice.student.user.get_full_name }}</dd>
+
+
           <dt class="col-5">Admission No</dt><dd class="col-7">{{ invoice.student.admission_number }}</dd>
-          <dt class="col-5">Amount</dt><dd class="col-7 fw-bold">{{ invoice.currency }} {{ invoice.amount }}</dd>
-          <dt class="col-5">Paid</dt><dd class="col-7 text-success fw-bold">{{ invoice.currency }} {{ invoice.amount_paid }}</dd>
-          <dt class="col-5">Balance</dt><dd class="col-7 {% if invoice.balance > 0 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ invoice.currency }} {{ invoice.balance }}</dd>
+          <dt class="col-5">Amount</dt><dd class="col-7 fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.amount }}</span></dd>
+          <dt class="col-5">Paid</dt><dd class="col-7 text-success fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.amount_paid }}</span></dd>
+          <dt class="col-5">Balance</dt><dd class="col-7 {% if invoice.balance > 0 %}text-danger{% else %}text-success{% endif %} fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.balance }}</span></dd>
           <dt class="col-5">Status</dt><dd class="col-7"><span class="badge {% if invoice.status == 'paid' %}bg-success{% elif invoice.status == 'partial' %}bg-warning text-dark{% elif invoice.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ invoice.get_status_display }}</span></dd>
           <dt class="col-5">Issued</dt><dd class="col-7">{{ invoice.issued_date }}</dd>
           <dt class="col-5">Due Date</dt><dd class="col-7">{{ invoice.due_date|default:"Not set" }}</dd>
@@ -38,7 +40,7 @@
               <td>{{ p.payment_date|date:"d M Y" }}</td>
               <td>{{ p.get_method_display }}</td>
               <td class="text-muted">{{ p.reference|default:"-" }}</td>
-              <td class="text-success fw-semibold">{{ p.currency }} {{ p.amount }}</td>
+              <td class="text-success fw-semibold"><span class="money-amount">{{ p.currency }} {{ p.amount }}</span></td>
               <td><span class="badge {% if p.status == 'confirmed' %}bg-success{% elif p.status == 'pending' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ p.get_status_display }}</span></td>
             </tr>
             {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No payments recorded.</td></tr>
@@ -54,6 +56,7 @@
       <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Record Payment</div>
       <div class="card-body">
         <form method="post" action="{% url 'fees:record_payment' invoice.pk %}" data-offline-model="fee_payment">
+          <input type="hidden" name="invoice" value="{{ invoice.pk }}">
           {% csrf_token %}
           <div class="mb-2">
             <label class="form-label fw-semibold" style="font-size:.82rem;">Amount</label>
@@ -70,7 +73,6 @@
             <label class="form-label fw-semibold" style="font-size:.82rem;">Payment Method</label>
             <select name="method" class="form-select form-select-sm">
               <option value="cash">Cash</option>
-              <option value="paynow">Paynow</option>
               <option value="ecocash">EcoCash</option>
               <option value="onemoney">OneMoney</option>
               <option value="bank_transfer">Bank Transfer</option>

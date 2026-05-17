@@ -42,6 +42,9 @@ urlpatterns = [
     path('api/', include('api.urls')),
     # Timetable
     path('timetable/', include('timetable.urls')),
+    path('offline-sync/', TemplateView.as_view(
+    template_name='offline_sync.html'
+), name='offline_sync'),
 ]
 
 if settings.DEBUG:

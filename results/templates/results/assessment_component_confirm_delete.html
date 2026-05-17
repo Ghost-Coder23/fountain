@@ -1,0 +1,20 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Delete Assessment Component{% endblock %}
+{% block page_title %}Delete Assessment Component{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title text-danger">Delete {{ object.name }}?</h5>
+    <p class="card-text">
+      This will permanently delete the assessment component <strong>{{ object.name }}</strong> ({{ object.weight }}%).
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex gap-3">
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url 'results:assessment_component_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

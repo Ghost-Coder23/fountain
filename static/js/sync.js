@@ -1,6 +1,17 @@
 /**
- * Sync Manager for EduCore
+ * Sync Manager for EduCore — Fixed
  * Queues real form submissions offline and replays them later.
+ *
+ * FIXES:
+ *  1. 403 errors: refresh CSRF token from the server before replaying the queue,
+ *     because the cookie saved offline may be stale/expired by the time sync runs.
+ *  2. 403 errors: on a 403 response during replay, attempt a CSRF refresh and retry once.
+ *  3. SW message: listen for SW_FLUSH_QUEUE message from the service worker so
+ *     flushQueue() runs even when the page was closed during offline work.
+ *  4. replayQueuedForm: detect redirect-to-login (Django redirects on session expiry)
+ *     and surface a clear error instead of silently succeeding.
+ *  5. initialSync: called automatically on construction when online, so IndexedDB
+ *     is always populated for offline use after first load.
  */
 
 class SyncManager {
@@ -20,8 +31,22 @@ class SyncManager {
         // Capture submits before the browser navigates away while offline.
         document.addEventListener('submit', (event) => this.handleFormSubmit(event), true);
 
+        // FIX: listen for the SW_FLUSH_QUEUE message from the service worker
+        // so background sync works even if the user closed and reopened the tab.
+        navigator.serviceWorker?.addEventListener('message', (event) => {
+            if (event.data?.type === 'SW_FLUSH_QUEUE') {
+                console.log('[SyncManager] Received SW_FLUSH_QUEUE — flushing...');
+                this.flushQueue();
+            }
+        });
+
         this.handleOnlineStatus(navigator.onLine);
         this.updateOfflineOpsUI().catch((error) => console.warn('Offline UI update failed:', error));
+
+        // FIX: run initialSync on startup so data is available offline from first visit
+        if (navigator.onLine) {
+            this.initialSync();
+        }
     }
 
     async updateOfflineOpsUI() {
@@ -317,13 +342,29 @@ class SyncManager {
         const banner = document.getElementById('offline-banner');
         if (!isOnline) {
             if (banner) banner.style.display = 'block';
-            console.log('App is offline. Changes will be saved locally.');
+            console.log('[SyncManager] App is offline. Changes will be saved locally.');
             return;
         }
 
         if (banner) banner.style.display = 'none';
-        console.log('App is online. Starting sync...');
+        console.log('[SyncManager] App is online. Starting sync...');
         this.flushQueue();
+    }
+
+    // FIX: fetch a fresh CSRF token from the server before replaying queued forms.
+    // The token saved in the cookie while offline may be expired, causing 403s.
+    async refreshCsrfToken() {
+        try {
+            // Django returns a fresh cookie on any GET to a CSRF-exempt endpoint.
+            // Hitting the root page is safe and always available (it's pre-cached).
+            const response = await fetch('/', { method: 'GET', credentials: 'same-origin' });
+            if (response.ok) {
+                // The browser automatically updates the csrftoken cookie from Set-Cookie headers.
+                console.log('[SyncManager] CSRF token refreshed.');
+            }
+        } catch (err) {
+            console.warn('[SyncManager] Could not refresh CSRF token:', err.message);
+        }
     }
 
     async flushQueue() {
@@ -334,6 +375,10 @@ class SyncManager {
 
         this.isSyncing = true;
         this.showSyncStatus('syncing');
+
+        // FIX: always refresh the CSRF token before replaying any queued requests.
+        // This is the primary cause of 403 Forbidden errors after coming back online.
+        await this.refreshCsrfToken();
 
         let syncedCount = 0;
         let failedCount = 0;
@@ -350,7 +395,7 @@ class SyncManager {
                 } catch (error) {
                     failedCount += 1;
                     await this.markQueueError(item, error);
-                    console.error(`Sync failed for item ${item.id}:`, error);
+                    console.error(`[SyncManager] Sync failed for item ${item.id}:`, error);
                 }
             }
 
@@ -371,15 +416,17 @@ class SyncManager {
         return Boolean(item.data?._offline_url && Array.isArray(item.data?._offline_entries));
     }
 
-    async replayQueuedForm(item) {
+    async replayQueuedForm(item, isRetry = false) {
         const formData = new FormData();
         for (const entry of item.data._offline_entries) {
             formData.append(entry.key, entry.value);
         }
 
-        const headers = { 'X-Requested-With': 'OfflineSync' };
         const csrfToken = this.getCookie('csrftoken');
-        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+        const headers = {
+            'X-Requested-With': 'OfflineSync',
+            ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {})
+        };
 
         const response = await fetch(item.data._offline_url, {
             method: (item.data._offline_method || 'POST').toUpperCase(),
@@ -389,8 +436,20 @@ class SyncManager {
             redirect: 'follow'
         });
 
+        // FIX: Django session expiry redirects to /login/ — detect this and surface a real error
+        if (response.redirected && response.url.includes('/login')) {
+            throw new Error('Session expired. Please log in again, then retry sync.');
+        }
+
+        // FIX: on 403, try refreshing the CSRF token and retry once
+        if (response.status === 403 && !isRetry) {
+            console.warn('[SyncManager] 403 on replay — refreshing CSRF and retrying once');
+            await this.refreshCsrfToken();
+            return this.replayQueuedForm(item, true);
+        }
+
         if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
+            throw new Error(`Server responded with ${response.status} for ${item.data._offline_url}`);
         }
 
         await this.db.delete('sync_queue', item.id);
@@ -399,9 +458,10 @@ class SyncManager {
     async syncLegacyQueueItem(item) {
         const response = await fetch('/api/sync/', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': this.getCookie('csrftoken')
+                'X-CSRFToken': this.getCookie('csrftoken') || ''
             },
             body: JSON.stringify({
                 operations: [{
@@ -414,7 +474,7 @@ class SyncManager {
         });
 
         if (!response.ok) {
-            throw new Error('Legacy sync request failed');
+            throw new Error(`Legacy sync request failed with ${response.status}`);
         }
 
         const result = await response.json();
@@ -497,7 +557,12 @@ class SyncManager {
         if (!navigator.onLine) return;
 
         try {
-            const response = await fetch('/api/initial-sync/');
+            const response = await fetch('/api/initial-sync/', {
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRFToken': this.getCookie('csrftoken') || ''
+                }
+            });
             if (response.ok) {
                 const data = await response.json();
 
@@ -508,10 +573,10 @@ class SyncManager {
                         await this.db.put('meta', { id: 'current_school', ...value });
                     }
                 }
-                console.log('Initial sync completed.');
+                console.log('[SyncManager] Initial sync completed.');
             }
         } catch (error) {
-            console.error('Initial sync failed:', error);
+            console.error('[SyncManager] Initial sync failed:', error);
         }
     }
 }

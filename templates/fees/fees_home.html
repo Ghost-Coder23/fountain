@@ -19,8 +19,8 @@
     <div class="card border-0 shadow-sm rounded-4 h-100">
       <div class="card-body">
         <div class="text-muted small fw-bold text-uppercase mb-2">Total Collected</div>
-        <h3 class="fw-bold text-success mb-0">${{ total_paid|floatformat:2 }}</h3>
-        <div class="mt-2 small text-muted">Out of ${{ total_invoiced|floatformat:2 }} invoiced</div>
+        <h3 class="fw-bold text-success mb-0"><span class="money-amount">${{ total_paid|floatformat:2 }}</span></h3>
+        <div class="mt-2 small text-muted">Out of <span class="money-amount">${{ total_invoiced|floatformat:2 }}</span> invoiced</div>
       </div>
     </div>
   </div>
@@ -28,7 +28,7 @@
     <div class="card border-0 shadow-sm rounded-4 h-100">
       <div class="card-body">
         <div class="text-muted small fw-bold text-uppercase mb-2">Total Expenses</div>
-        <h3 class="fw-bold text-danger mb-0">${{ total_expenses|floatformat:2 }}</h3>
+        <h3 class="fw-bold text-danger mb-0"><span class="money-amount">${{ total_expenses|floatformat:2 }}</span></h3>
         <div class="mt-2 small text-muted"><a href="{% url 'fees:expense_list' %}" class="text-decoration-none">View detailed list</a></div>
       </div>
     </div>
@@ -37,7 +37,7 @@
     <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary text-white">
       <div class="card-body">
         <div class="text-white-50 small fw-bold text-uppercase mb-2">Net Position</div>
-        <h3 class="fw-bold mb-0">${{ net_position|floatformat:2 }}</h3>
+        <h3 class="fw-bold mb-0"><span class="money-amount">${{ net_position|floatformat:2 }}</span></h3>
         <div class="mt-2 small text-white-50">Cash available (Revenue - Expenses)</div>
       </div>
     </div>
@@ -46,7 +46,7 @@
     <div class="card border-0 shadow-sm rounded-4 h-100">
       <div class="card-body">
         <div class="text-muted small fw-bold text-uppercase mb-2">Outstanding Fees</div>
-        <h3 class="fw-bold text-warning mb-0">${{ total_outstanding|floatformat:2 }}</h3>
+        <h3 class="fw-bold text-warning mb-0"><span class="money-amount">${{ total_outstanding|floatformat:2 }}</span></h3>
         <div class="mt-2 small text-muted">{{ overdue_count }} overdue invoices</div>
       </div>
     </div>
@@ -71,7 +71,7 @@
                   <div class="fw-bold">{{ inv.student.user.get_full_name }}</div>
                   <small class="text-muted">#{{ inv.invoice_number }}</small>
                 </td>
-                <td>{{ inv.currency }} {{ inv.amount }}</td>
+                <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
                 <td><span class="badge rounded-pill {% if inv.status == 'paid' %}bg-success-subtle text-success{% elif inv.status == 'partial' %}bg-warning-subtle text-warning{% elif inv.status == 'overdue' %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
                 <td class="pe-4 text-end"><a href="{% url 'fees:invoice_detail' inv.pk %}" class="btn btn-sm btn-light">View</a></td>
               </tr>
@@ -97,7 +97,7 @@
               <tr>
                 <td class="ps-4 fw-bold">{{ exp.title }}</td>
                 <td><span class="badge bg-light text-dark">{{ exp.category.name }}</span></td>
-                <td class="text-danger fw-bold">-{{ exp.currency }} {{ exp.amount }}</td>
+                <td class="text-danger fw-bold"><span class="money-amount">-{{ exp.currency }} {{ exp.amount }}</span></td>
                 <td class="pe-4 text-end text-muted small">{{ exp.date }}</td>
               </tr>
               {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No expenses recorded.</td></tr>
@@ -123,7 +123,7 @@
                 <div class="fw-bold small">{{ p.invoice.student.user.get_full_name }}</div>
                 <small class="text-muted">{{ p.get_method_display }} • {{ p.payment_date|date:"d M" }}</small>
               </div>
-              <div class="text-success fw-bold">+{{ p.currency }} {{ p.amount }}</div>
+              <div class="text-success fw-bold"><span class="money-amount">+{{ p.currency }} {{ p.amount }}</span></div>
             </div>
           </div>
           {% empty %}

@@ -237,7 +237,7 @@
         <div class="col-md-6 col-lg-4 gallery-item-wrapper" data-category="{{ item.media_type }}">
             <div class="gallery-card" data-bs-toggle="modal" data-bs-target="#mediaModal" 
                  data-type="{{ item.media_type }}" 
-                 {% if item.media_type == 'image' %}data-src="{{ item.image.url }}"{% else %}data-src="{{ item.video_url }}"{% endif %}
+                 {% if item.media_type == 'image' %}data-src="{{ item.image.url }}"{% else %}{% if item.video_file %}data-video-file="{{ item.video_file.url }}"{% elif item.video_url %}data-src="{{ item.video_url }}"{% endif %}{% endif %}
                  data-title="{{ item.title }}" data-desc="{{ item.description }}">
                 
                 <div class="card-img-wrapper">
@@ -333,6 +333,7 @@
         const button = event.relatedTarget;
         const type = button.getAttribute('data-type');
         const src = button.getAttribute('data-src');
+        const videoFile = button.getAttribute('data-video-file');
         const title = button.getAttribute('data-title');
         const desc = button.getAttribute('data-desc');
         
@@ -346,20 +347,29 @@
         if (type === 'image') {
             modalMedia.innerHTML = `<img src="${src}" class="img-fluid" alt="${title}">`;
         } else {
-            // Simple YouTube/Vimeo/Local link handler
-            let embedUrl = src;
-            if (src.includes('youtube.com') || src.includes('youtu.be')) {
-                const videoId = src.includes('v=') ? src.split('v=')[1].split('&')[0] : src.split('/').pop();
-                embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-            } else if (src.includes('vimeo.com')) {
-                const videoId = src.split('/').pop();
-                embedUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
+            if (videoFile) {
+                // Local video file
+                modalMedia.innerHTML = `
+                    <video controls autoplay style="width: 100%; max-height: 80vh;">
+                        <source src="${videoFile}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>`;
+            } else if (src) {
+                // YouTube/Vimeo URL
+                let embedUrl = src;
+                if (src.includes('youtube.com') || src.includes('youtu.be')) {
+                    const videoId = src.includes('v=') ? src.split('v=')[1].split('&')[0] : src.split('/').pop();
+                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                } else if (src.includes('vimeo.com')) {
+                    const videoId = src.split('/').pop();
+                    embedUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
+                }
+                
+                modalMedia.innerHTML = `
+                    <iframe src="${embedUrl}" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen></iframe>`;
             }
-            
-            modalMedia.innerHTML = `
-                <iframe src="${embedUrl}" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen></iframe>`;
         }
     });
 

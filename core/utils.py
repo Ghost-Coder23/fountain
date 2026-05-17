@@ -8,6 +8,11 @@ from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.urls import reverse
 from schools.models import SchoolUser
+from django.http import HttpResponse
+import openpyxl
+from openpyxl.utils import get_column_letter
+from io import BytesIO
+import csv
 
 def send_welcome_email(request, user, school, is_new_user=True):
     """
@@ -96,3 +101,56 @@ class SchoolRoleMixin:
                 raise PermissionDenied("You do not have the required role")
         except SchoolUser.DoesNotExist:
             raise PermissionDenied("You are not a member of this school")
+
+def export_to_excel(data, headers, filename="export.xlsx"):
+    """
+    Export data to Excel file.
+    
+    Args:
+        data: List of lists containing the data rows
+        headers: List of column headers
+        filename: Name of the Excel file to download
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    # Write headers
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = openpyxl.styles.Font(bold=True)
+    
+    # Write data rows
+    for row_num, row_data in enumerate(data, 2):
+        for col_num, cell_value in enumerate(row_data, 1):
+            ws.cell(row=row_num, column=col_num, value=cell_value)
+    
+    # Auto-adjust column widths
+    for col_num in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col_num)].bestFit = True
+        ws.column_dimensions[get_column_letter(col_num)].auto_size = True
+    
+    # Create response
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    # Save workbook to response
+    wb.save(response)
+    return response
+
+def export_to_csv(data, headers, filename="export.csv"):
+    """
+    Export data to CSV file.
+    
+    Args:
+        data: List of lists containing the data rows
+        headers: List of column headers
+        filename: Name of the CSV file to download
+    """
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    writer.writerows(data)
+    
+    return response
