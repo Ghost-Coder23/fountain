@@ -511,9 +511,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
       <i class="bi bi-arrow-up-circle"></i> Promote Students
     </a>
     {% endif %}
-    <a href="{% url 'results:term_list' %}" class="nav-link {% if 'terms' in request.path %}active{% endif %}">
-      <i class="bi bi-calendar3"></i> Terms
-    </a>
     {% endif %}
 
     {% if school_role == 'admin' %}
@@ -556,6 +553,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <div class="nav-section">Settings</div>
     <a href="{% url 'academics:academic_year_list' %}" class="nav-link {% if 'years' in request.path %}active{% endif %}">
       <i class="bi bi-calendar-range"></i> Academic Years
+    </a>
+    <a href="{% url 'results:term_list' %}" class="nav-link {% if 'terms' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar3"></i> Terms
     </a>
     {% if school_role in 'headmaster,admin' %}
     <a href="{% url 'academics:teacher_assignment_list' %}" class="nav-link {% if 'assignments' in request.path %}active{% endif %}">
@@ -772,6 +772,123 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   restoreSidebarScroll();
+
+  // Hide back button on main dashboard
+  const currentPath = window.location.pathname;
+  const isDashboard = currentPath === '/analytics/dashboard/' || currentPath === '/school/dashboard/';
+  if (isDashboard) {
+    const backBtns = [document.getElementById('global-back-btn'), document.getElementById('mobile-back-btn')];
+    backBtns.forEach(btn => { if(btn) btn.style.display = 'none'; });
+  }
+
+  // Page Transition Loader logic
+  const progressBar = document.querySelector('#page-loader .progress-bar');
+  window.addEventListener('beforeunload', () => {
+    if (progressBar) progressBar.style.width = '30%';
+    setTimeout(() => { if(progressBar) progressBar.style.width = '70%'; }, 200);
+  });
+
+  document.querySelectorAll('.searchable-select').forEach(el => {
+    new TomSelect(el, {
+      create: false,
+      sortField: {
+        field: "text",
+        direction: "asc"
+      },
+      placeholder: "Search..."
+    });
+  });
+  
+  if (document.getElementById('notif-count')) {
+    loadNotifCount();
+    setInterval(loadNotifCount, 60000);
+  }
+
+  // Money Amount Toggle
+  const moneyToggleBtn = document.getElementById('moneyToggleBtn');
+  const moneyToggleIcon = document.getElementById('moneyToggleIcon');
+  const body = document.body;
+  
+  // Check saved state in localStorage
+  const moneyHidden = localStorage.getItem('moneyHidden') === 'true';
+  if (moneyHidden) {
+    body.classList.add('money-hidden');
+    moneyToggleIcon.classList.remove('bi-eye');
+    moneyToggleIcon.classList.add('bi-eye-slash');
+  }
+  
+  moneyToggleBtn.addEventListener('click', () => {
+    const isHidden = body.classList.toggle('money-hidden');
+    localStorage.setItem('moneyHidden', isHidden);
+    
+    if (isHidden) {
+      moneyToggleIcon.classList.remove('bi-eye');
+      moneyToggleIcon.classList.add('bi-eye-slash');
+    } else {
+      moneyToggleIcon.classList.remove('bi-eye-slash');
+      moneyToggleIcon.classList.add('bi-eye');
+    }
+  });
+
+  // --- Deep Offline Cache Warmer (v24: Queued) ---
+  if ('serviceWorker' in navigator && navigator.onLine) {
+    if (!window._warmedRoutes) window._warmedRoutes = new Set();
+    let crawlQueue = [];
+    let isProcessingQueue = false;
+
+    const processQueue = async () => {
+      if (isProcessingQueue || crawlQueue.length === 0) return;
+      isProcessingQueue = true;
+      
+      while (crawlQueue.length > 0) {
+        const route = crawlQueue.shift();
+        try {
+          await fetch(route, { 
+            priority: 'low',
+            headers: { 'Accept': 'text/html', 'X-Offline-Warm': 'true' }
+          });
+          console.log(`[Crawler] Cached: ${route}`);
+        } catch(e) {}
+        // Wait 200ms between fetches to avoid overloading the browser
+        await new Promise(r => setTimeout(r, 200));
+      }
+      isProcessingQueue = false;
+    };
+
+    const warmPageLinks = () => {
+      const discovered = Array.from(document.querySelectorAll('a, [hx-get]'))
+        .map(el => {
+          try {
+            const href = el.getAttribute('href') || el.getAttribute('hx-get');
+            if (!href || href === '#' || href.startsWith('javascript:')) return null;
+            const url = new URL(href, window.location.origin);
+            if (url.origin !== window.location.origin) return null;
+            
+            // Normalize: Ensure trailing slash for Django URLs
+            let path = url.pathname;
+            if (!path.endsWith('/') && !path.includes('.')) path += '/';
+            return path;
+          } catch(e) { return null; }
+        })
+        .filter(path => 
+          path && path.startsWith('/') && 
+          !path.includes('logout') && !path.includes('delete') &&
+          !window._warmedRoutes.has(path)
+        );
+      
+      if (discovered.length > 0) {
+        console.log(`[Crawler] Queued ${discovered.length} new links for offline use`);
+        discovered.forEach(path => {
+          window._warmedRoutes.add(path);
+          crawlQueue.push(path);
+        });
+        processQueue();
+      }
+    };
+
+    setTimeout(warmPageLinks, 2000);
+    document.addEventListener('htmx:afterSwap', () => setTimeout(warmPageLinks, 500));
+  }
 });
 
 window.addEventListener('pageshow', (event) => {
@@ -779,125 +896,6 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     restoreSidebarScroll();
   }
-});
-
-// Initialize searchable dropdowns
-    // Hide back button on main dashboard
-    const currentPath = window.location.pathname;
-    const isDashboard = currentPath === '/analytics/dashboard/' || currentPath === '/school/dashboard/';
-    if (isDashboard) {
-        const backBtns = [document.getElementById('global-back-btn'), document.getElementById('mobile-back-btn')];
-        backBtns.forEach(btn => { if(btn) btn.style.display = 'none'; });
-    }
-
-    // Page Transition Loader logic
-    const progressBar = document.querySelector('#page-loader .progress-bar');
-    window.addEventListener('beforeunload', () => {
-        if (progressBar) progressBar.style.width = '30%';
-        setTimeout(() => { if(progressBar) progressBar.style.width = '70%'; }, 200);
-    });
-
-    document.querySelectorAll('.searchable-select').forEach(el => {
-        new TomSelect(el, {
-            create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            },
-            placeholder: "Search..."
-        });
-    });
-    
-    if (document.getElementById('notif-count')) {
-        loadNotifCount();
-        setInterval(loadNotifCount, 60000);
-    }
-
-    // Money Amount Toggle
-    const moneyToggleBtn = document.getElementById('moneyToggleBtn');
-    const moneyToggleIcon = document.getElementById('moneyToggleIcon');
-    const body = document.body;
-    
-    // Check saved state in localStorage
-    const moneyHidden = localStorage.getItem('moneyHidden') === 'true';
-    if (moneyHidden) {
-        body.classList.add('money-hidden');
-        moneyToggleIcon.classList.remove('bi-eye');
-        moneyToggleIcon.classList.add('bi-eye-slash');
-    }
-    
-    moneyToggleBtn.addEventListener('click', () => {
-        const isHidden = body.classList.toggle('money-hidden');
-        localStorage.setItem('moneyHidden', isHidden);
-        
-        if (isHidden) {
-            moneyToggleIcon.classList.remove('bi-eye');
-            moneyToggleIcon.classList.add('bi-eye-slash');
-        } else {
-            moneyToggleIcon.classList.remove('bi-eye-slash');
-            moneyToggleIcon.classList.add('bi-eye');
-        }
-    });
-
-    // --- Deep Offline Cache Warmer (v24: Queued) ---
-    if ('serviceWorker' in navigator && navigator.onLine) {
-        if (!window._warmedRoutes) window._warmedRoutes = new Set();
-        let crawlQueue = [];
-        let isProcessingQueue = false;
-
-        const processQueue = async () => {
-            if (isProcessingQueue || crawlQueue.length === 0) return;
-            isProcessingQueue = true;
-            
-            while (crawlQueue.length > 0) {
-                const route = crawlQueue.shift();
-                try {
-                    await fetch(route, { 
-                        priority: 'low',
-                        headers: { 'Accept': 'text/html', 'X-Offline-Warm': 'true' }
-                    });
-                    console.log(`[Crawler] Cached: ${route}`);
-                } catch(e) {}
-                // Wait 200ms between fetches to avoid overloading the browser
-                await new Promise(r => setTimeout(r, 200));
-            }
-            isProcessingQueue = false;
-        };
-
-        const warmPageLinks = () => {
-            const discovered = Array.from(document.querySelectorAll('a, [hx-get]'))
-                .map(el => {
-                    try {
-                        const href = el.getAttribute('href') || el.getAttribute('hx-get');
-                        if (!href || href === '#' || href.startsWith('javascript:')) return null;
-                        const url = new URL(href, window.location.origin);
-                        if (url.origin !== window.location.origin) return null;
-                        
-                        // Normalize: Ensure trailing slash for Django URLs
-                        let path = url.pathname;
-                        if (!path.endsWith('/') && !path.includes('.')) path += '/';
-                        return path;
-                    } catch(e) { return null; }
-                })
-                .filter(path => 
-                    path && path.startsWith('/') && 
-                    !path.includes('logout') && !path.includes('delete') &&
-                    !window._warmedRoutes.has(path)
-                );
-            
-            if (discovered.length > 0) {
-                console.log(`[Crawler] Queued ${discovered.length} new links for offline use`);
-                discovered.forEach(path => {
-                    window._warmedRoutes.add(path);
-                    crawlQueue.push(path);
-                });
-                processQueue();
-            }
-        };
-
-        setTimeout(warmPageLinks, 2000);
-        document.addEventListener('htmx:afterSwap', () => setTimeout(warmPageLinks, 500));
-    }
 });
 </script>
 {% block extra_js %}{% endblock %}
