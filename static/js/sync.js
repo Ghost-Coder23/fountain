@@ -373,15 +373,30 @@ class SyncManager {
     // The token saved in the cookie while offline may be expired, causing 403s.
     async refreshCsrfToken() {
         try {
-            // Django returns a fresh cookie on any GET to a CSRF-exempt endpoint.
-            // Hitting the root page is safe and always available (it's pre-cached).
-            const response = await fetch('/', { method: 'GET', credentials: 'same-origin' });
+            // Use dedicated CSRF refresh endpoint
+            const response = await fetch('/api/csrf-refresh/', { 
+                method: 'GET', 
+                credentials: 'same-origin' 
+            });
             if (response.ok) {
-                // The browser automatically updates the csrftoken cookie from Set-Cookie headers.
-                console.log('[SyncManager] CSRF token refreshed.');
+                const data = await response.json();
+                if (data.csrf_token) {
+                    // Update local cookie (in case browser didn't get it)
+                    document.cookie = `csrftoken=${data.csrf_token}; path=/`;
+                }
+                console.log('[SyncManager] CSRF token refreshed successfully.');
             }
         } catch (err) {
             console.warn('[SyncManager] Could not refresh CSRF token:', err.message);
+            // Fall back to hitting root page
+            try {
+                const fallbackResponse = await fetch('/', { method: 'GET', credentials: 'same-origin' });
+                if (fallbackResponse.ok) {
+                    console.log('[SyncManager] CSRF token refreshed via fallback.');
+                }
+            } catch (fallbackErr) {
+                console.warn('[SyncManager] Fallback CSRF refresh also failed:', fallbackErr.message);
+            }
         }
     }
 

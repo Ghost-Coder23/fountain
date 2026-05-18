@@ -45,6 +45,7 @@ urlpatterns = [
     path('offline-sync/', TemplateView.as_view(
     template_name='offline_sync.html'
 ), name='offline_sync'),
+    path('api/csrf-refresh/', school_views.csrf_refresh, name='csrf_refresh'),
 ]
 
 if settings.DEBUG:
