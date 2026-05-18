@@ -278,35 +278,53 @@ class SyncManager {
     }
 
     async saveOffline(form, submitter) {
-        const formData = new FormData(form);
-        if (submitter?.name && !formData.has(submitter.name)) {
-            formData.append(submitter.name, submitter.value || '1');
+        try {
+            console.log('[SyncManager] Saving form offline...', form);
+            
+            if (!this.db) {
+                throw new Error('Offline database not initialized');
+            }
+
+            const formData = new FormData(form);
+            if (submitter?.name && !formData.has(submitter.name)) {
+                formData.append(submitter.name, submitter.value || '1');
+            }
+
+            const modelName = this.determineModelName(form, submitter);
+            const opType = this.determineOperationType(form, submitter);
+            const actionUrl = this.getFormAction(form);
+            const itemLabel = form.getAttribute('data-offline-label') || this.prettyName(modelName);
+
+            console.log('[SyncManager] Queue payload:', { modelName, opType, actionUrl, itemLabel });
+
+            const queuePayload = {
+                _offline_origin: `${window.location.pathname}${window.location.search}`,
+                _offline_url: actionUrl.toString(),
+                _offline_method: (form.method || 'POST').toUpperCase(),
+                _offline_label: itemLabel,
+                _offline_entries: this.serializeFormData(formData),
+                _offline_saved_at: new Date().toISOString()
+            };
+
+            await this.db.queueWrite(modelName, opType, queuePayload);
+            await this.updateOfflineOpsUI();
+
+            const submitButton = submitter || form.querySelector('button[type="submit"], input[type="submit"]');
+            this.decorateSubmitButton(submitButton, 'Saved Offline');
+            this.showFormAlert(
+                form,
+                'success',
+                `Saved offline. Your ${itemLabel.toLowerCase()} will sync automatically when the connection returns.`
+            );
+            console.log('[SyncManager] Form saved offline successfully!');
+        } catch (error) {
+            console.error('[SyncManager] Failed to save offline:', error);
+            this.showFormAlert(
+                form,
+                'danger',
+                `Failed to save offline: ${error.message || 'Unknown error'}. Please try again or contact support.`
+            );
         }
-
-        const modelName = this.determineModelName(form, submitter);
-        const opType = this.determineOperationType(form, submitter);
-        const actionUrl = this.getFormAction(form);
-        const itemLabel = form.getAttribute('data-offline-label') || this.prettyName(modelName);
-
-        const queuePayload = {
-            _offline_origin: `${window.location.pathname}${window.location.search}`,
-            _offline_url: actionUrl.toString(),
-            _offline_method: (form.method || 'POST').toUpperCase(),
-            _offline_label: itemLabel,
-            _offline_entries: this.serializeFormData(formData),
-            _offline_saved_at: new Date().toISOString()
-        };
-
-        await this.db.queueWrite(modelName, opType, queuePayload);
-        await this.updateOfflineOpsUI();
-
-        const submitButton = submitter || form.querySelector('button[type="submit"], input[type="submit"]');
-        this.decorateSubmitButton(submitButton, 'Saved Offline');
-        this.showFormAlert(
-            form,
-            'warning',
-            `Saved offline. Your ${itemLabel.toLowerCase()} will sync automatically when the connection returns.`
-        );
     }
 
     decorateSubmitButton(button, label) {

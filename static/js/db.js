@@ -14,9 +14,11 @@ class EduCoreDB {
 
     async open() {
         return new Promise((resolve, reject) => {
+            console.log(`[EduCoreDB] Opening database for tenant: ${this.prefix}`);
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
             request.onupgradeneeded = (event) => {
+                console.log('[EduCoreDB] Upgrading database...');
                 const db = event.target.result;
                 // List of stores to create. We use prefixes to support multiple schools in one browser.
                 // In a real scenario, we might want to dynamically create stores based on the prefix.
@@ -34,6 +36,7 @@ class EduCoreDB {
                     // Store names are prefixed: greenwood_students
                     const prefixedName = `${this.prefix}_${storeName}`;
                     if (!db.objectStoreNames.contains(prefixedName)) {
+                        console.log(`[EduCoreDB] Creating store: ${prefixedName}`);
                         db.createObjectStore(prefixedName, { keyPath: 'id' });
                     }
                 });
@@ -41,10 +44,19 @@ class EduCoreDB {
 
             request.onsuccess = (event) => {
                 this.db = event.target.result;
+                console.log('[EduCoreDB] Database opened successfully!');
                 resolve(this.db);
             };
 
-            request.onerror = (event) => reject(event.target.error);
+            request.onerror = (event) => {
+                console.error('[EduCoreDB] Failed to open database:', event.target.error);
+                reject(event.target.error);
+            };
+
+            request.onblocked = (event) => {
+                console.warn('[EduCoreDB] Database upgrade blocked. Please close other tabs.');
+                alert('Please close other open tabs of AcademiaLink to continue.');
+            };
         });
     }
 

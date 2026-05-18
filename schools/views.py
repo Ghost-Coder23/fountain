@@ -202,7 +202,16 @@ class SchoolRegistrationView(CreateView):
                     f'You will be notified at {school.email} once approved.'
                 )
 
-                return redirect('home')
+                # Auto-login the new headmaster
+                auth_user = authenticate(
+                    self.request,
+                    username=user.username,
+                    password=form.cleaned_data['headmaster_password']
+                )
+                if auth_user:
+                    login(self.request, auth_user)
+
+                return redirect('registration_pending')
 
         except Exception as e:
             messages.error(self.request, f'Registration failed: {str(e)}')

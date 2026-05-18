@@ -1,6 +1,6 @@
 {
-  "name": "Academialink- Smart School Management",
-  "short_name": "Academialink",
+  "name": "AcademiaLink - Smart School Management",
+  "short_name": "AcademiaLink",
   "description": "Comprehensive School Management for Offline/Online usage.",
   "start_url": "/",
   "display": "standalone",

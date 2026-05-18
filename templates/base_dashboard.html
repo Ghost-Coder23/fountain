@@ -90,6 +90,40 @@
     border-color: var(--primary);
     transform: translateX(-2px);
 }
+/* Install App Banner */
+.install-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  z-index: 9999;
+  max-width: 90%;
+  width: 500px;
+}
+.install-banner.show {
+  display: flex;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.install-banner .icon {
+  font-size: 2rem;
+  color: var(--primary);
+}
+.install-banner .text { flex: 1; }
+.install-banner .text h6 { margin: 0 0 0.25rem; font-weight: 700; }
+.install-banner .text p { margin: 0; font-size: 0.875rem; color: #64748b; }
+.install-banner .btn-group { display: flex; gap: 0.5rem; }
+
 /* Offline UI */
 #offline-banner {
     display: none;
@@ -669,6 +703,25 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 const tenantPrefix = "{{ current_school.subdomain|default:'global' }}";
 let db, syncManager;
 
+// Initialize DB and Sync Manager regardless of service worker support
+window.addEventListener('DOMContentLoaded', async () => {
+    // Initialize DB and Sync first (critical for offline functionality)
+    db = new EduCoreDB(tenantPrefix);
+    await db.open();
+    
+    syncManager = new SyncManager(db, tenantPrefix);
+    window.eduCoreDB = db;
+    window.syncManager = syncManager;
+    
+    // Perform initial sync if needed
+    const hasSynced = localStorage.getItem(`synced_${tenantPrefix}`);
+    if (!hasSynced && navigator.onLine) {
+        await syncManager.initialSync();
+        localStorage.setItem(`synced_${tenantPrefix}`, 'true');
+    }
+});
+
+// Service Worker Registration (separate, not blocking)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
@@ -680,21 +733,6 @@ if ('serviceWorker' in navigator) {
                 console.log("New Service Worker activated. Reloading...");
                 window.location.reload();
             });
-
-            // Initialize DB and Sync
-            db = new EduCoreDB(tenantPrefix);
-            await db.open();
-            
-            syncManager = new SyncManager(db, tenantPrefix);
-            window.eduCoreDB = db;
-            window.syncManager = syncManager;
-            
-            // Perform initial sync if needed
-            const hasSynced = localStorage.getItem(`synced_${tenantPrefix}`);
-            if (!hasSynced && navigator.onLine) {
-                await syncManager.initialSync();
-                localStorage.setItem(`synced_${tenantPrefix}`, 'true');
-            }
 
         } catch (error) {
             console.log('ServiceWorker registration failed: ', error);
@@ -897,6 +935,152 @@ window.addEventListener('pageshow', (event) => {
     restoreSidebarScroll();
   }
 });
+</script>
+
+<!-- Install App Banner -->
+<div class="install-banner" id="installBanner">
+  <i class="bi bi-box-arrow-down-circle icon"></i>
+  <div class="text">
+    <h6>Install AcademiaLink</h6>
+    <p>Get quick access to all features</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
+    <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
+  </div>
+</div>
+
+<script>
+// PWA Install Banner
+let deferredPrompt;
+const installBanner = document.getElementById('installBanner');
+const installBtn = document.getElementById('installBtn');
+const dismissBtn = document.getElementById('dismissInstall');
+
+// Check if user already dismissed
+if (localStorage.getItem('installDismissed') !== 'true') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.classList.add('show');
+  });
+}
+
+// Install button click
+installBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    }
+    deferredPrompt = null;
+    installBanner.classList.remove('show');
+  }
+});
+
+// Dismiss button click
+dismissBtn.addEventListener('click', () => {
+  installBanner.classList.remove('show');
+  localStorage.setItem('installDismissed', 'true');
+});
+</script>
+
+<!-- Install App Banner -->
+<div class="install-banner" id="installBanner">
+  <i class="bi bi-box-arrow-down-circle icon"></i>
+  <div class="text">
+    <h6>Install AcademiaLink</h6>
+    <p>Get quick access to all features</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
+    <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
+  </div>
+</div>
+
+<script>
+// PWA Install Banner for Dashboard
+let deferredPrompt;
+const installBanner = document.getElementById('installBanner');
+const installBtn = document.getElementById('installBtn');
+const dismissBtn = document.getElementById('dismissInstall');
+
+// Check if user already dismissed
+if (localStorage.getItem('installDismissed') !== 'true') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.classList.add('show');
+  });
+}
+
+// Install button click
+installBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    }
+    deferredPrompt = null;
+    installBanner.classList.remove('show');
+  }
+});
+
+// Dismiss button click
+dismissBtn.addEventListener('click', () => {
+  installBanner.classList.remove('show');
+  localStorage.setItem('installDismissed', 'true');
+});
+  // PWA Install Banner for Dashboard
+  let deferredPrompt;
+  const installBanner = document.createElement('div');
+  installBanner.className = 'install-banner';
+  installBanner.id = 'installBanner';
+  installBanner.innerHTML = `
+    <i class="bi bi-box-arrow-down-circle icon"></i>
+    <div class="text">
+      <h6>Install AcademiaLink</h6>
+      <p>Get quick access to all features</p>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
+      <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
+    </div>
+  `;
+  document.body.appendChild(installBanner);
+
+  // Check if user already dismissed
+  if (localStorage.getItem('installDismissed') !== 'true') {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBanner.classList.add('show');
+    });
+  }
+
+  // Add click listeners
+  const installBtn = document.getElementById('installBtn');
+  const dismissBtn = document.getElementById('dismissInstall');
+
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
+      deferredPrompt = null;
+      installBanner.classList.remove('show');
+    }
+  });
+
+  dismissBtn.addEventListener('click', () => {
+    installBanner.classList.remove('show');
+    localStorage.setItem('installDismissed', 'true');
+  });
+
 </script>
 {% block extra_js %}{% endblock %}
 </body>
