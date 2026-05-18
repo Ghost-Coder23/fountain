@@ -376,7 +376,7 @@ class DashboardView(TemplateView):
 
 @method_decorator(login_required, name='dispatch')
 class SchoolSettingsView(UpdateView):
-    """School branding and settings"""
+    """School branding and settings (admin/headmaster only)"""
     model = School
     form_class = SchoolBrandingForm
     template_name = 'schools/school_settings.html'
@@ -384,6 +384,15 @@ class SchoolSettingsView(UpdateView):
 
     def get_object(self):
         return self.request.school
+
+    def dispatch(self, request, *args, **kwargs):
+        school = getattr(request, 'school', None)
+        if school:
+            membership = SchoolUser.objects.filter(user=request.user, school=school, is_active=True).first()
+            if membership and membership.role not in ['headmaster', 'admin']:
+                messages.error(request, "You don't have permission to access this page.")
+                return redirect('dashboard')
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         messages.success(self.request, 'School settings updated successfully!')

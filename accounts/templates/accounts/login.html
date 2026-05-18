@@ -6,6 +6,7 @@
 <style>
     :root {
         --login-primary: {{ current_school.theme_color|default:"#4F46E5" }};
+        --login-primary-dark: {{ current_school.theme_color|default:"#4338CA" }};
         --login-primary-soft: {{ current_school.theme_color|default:"#4F46E5" }}15;
         --login-bg: #fdfdfd;
     }
@@ -207,7 +208,7 @@
     }
 
     .btn-submit:hover {
-        background: var(--primary-dark);
+        background: var(--login-primary-dark);
         transform: translateY(-2px);
         box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.3);
     }

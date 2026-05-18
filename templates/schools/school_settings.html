@@ -114,6 +114,26 @@ function copyRegistrationLink() {
         alert("Registration link copied to clipboard!");
     });
 }
+
+// Toggle custom weights section based on grading system selection
+document.addEventListener('DOMContentLoaded', function() {
+    const gradingSystemSelect = document.querySelector('select[name="grading_system"]');
+    const customWeightsSection = document.getElementById('custom-weights-section');
+    
+    function toggleCustomWeights() {
+        if (gradingSystemSelect.value === 'custom_weights') {
+            customWeightsSection.style.display = 'flex';
+        } else {
+            customWeightsSection.style.display = 'none';
+        }
+    }
+    
+    // Initial toggle on page load
+    toggleCustomWeights();
+    
+    // Toggle when selection changes
+    gradingSystemSelect.addEventListener('change', toggleCustomWeights);
+});
 </script>
 </div>
 {% endblock %}
