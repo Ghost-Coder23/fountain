@@ -64,10 +64,36 @@ def school_list(request):
 
 @superadmin_required
 def approve_school(request, school_id):
+    from django.core.mail import send_mail
+    from django.conf import settings
+    
     school = get_object_or_404(School, id=school_id)
     school.status = 'active'
     school.subscription_active = True
     school.save()
+    
+    # Send approval email to school
+    try:
+        headmaster = SchoolUser.objects.filter(school=school, role='headmaster').first()
+        if headmaster:
+            send_mail(
+                subject=f'Your school "{school.name}" has been approved!',
+                message=f'''
+Congratulations! Your school "{school.name}" has been approved and is now active!
+
+You can now login at: {request.build_absolute_uri('/accounts/login/')}
+Your school subdomain: {school.subdomain}
+
+Best regards,
+AcademiaLink Team
+''',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[school.email, headmaster.user.email],
+                fail_silently=False,
+            )
+    except Exception as e:
+        print(f"Error sending approval email: {e}")
+    
     messages.success(request, f'{school.name} has been approved and activated.')
     return redirect('superadmin:dashboard')
 

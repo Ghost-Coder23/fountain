@@ -30,6 +30,12 @@ class SchoolRegistrationForm(forms.ModelForm):
             raise forms.ValidationError("Subdomain can only contain letters, numbers, and hyphens.")
         return subdomain
 
+    def clean_headmaster_email(self):
+        email = self.cleaned_data['headmaster_email']
+        if User.objects.filter(username=email).exists():
+            raise forms.ValidationError("A user with this email already exists.")
+        return email
+
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get('headmaster_password')
