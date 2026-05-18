@@ -358,13 +358,25 @@ class SyncManager {
 
     handleOnlineStatus(isOnline) {
         const banner = document.getElementById('offline-banner');
+        const offlineBannerShown = localStorage.getItem('offlineBannerShown');
+        
         if (!isOnline) {
-            if (banner) banner.style.display = 'block';
+            if (banner && !offlineBannerShown) {
+                banner.style.display = 'block';
+                localStorage.setItem('offlineBannerShown', 'true');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    if (banner) banner.style.display = 'none';
+                }, 5000);
+            }
             console.log('[SyncManager] App is offline. Changes will be saved locally.');
             return;
         }
 
         if (banner) banner.style.display = 'none';
+        // Reset the flag when coming back online
+        localStorage.removeItem('offlineBannerShown');
         console.log('[SyncManager] App is online. Starting sync...');
         this.flushQueue();
     }

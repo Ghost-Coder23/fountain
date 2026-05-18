@@ -132,18 +132,18 @@
     -webkit-backdrop-filter: blur(8px);
     color: white;
     text-align: center;
-    padding: 8px 24px;
+    padding: 12px 24px;
     position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 50px;
+    bottom: 20px;
+    right: 20px;
+    border-radius: 16px;
     z-index: 10000;
     box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     font-weight: 600;
     font-size: 0.875rem;
     border: 1px solid rgba(255,255,255,0.2);
     transition: all 0.3s ease;
+    max-width: 300px;
 }
 .sync-status {
     position: fixed;
@@ -759,7 +759,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   </div>
 </footer>
 
-<div id="offline-banner"><i class="bi bi-wifi-off me-2"></i> You are currently offline. Working in local mode.</div>
+<div id="offline-banner" class="d-flex align-items-center gap-2">
+    <i class="bi bi-wifi-off"></i>
+    <span>You are currently offline. Working in local mode.</span>
+    <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.style.display='none';"></button>
+</div>
 <div id="sync-indicator" class="sync-status"></div>
 <!-- Install App Banner -->
 <div class="install-banner" id="installBanner">
