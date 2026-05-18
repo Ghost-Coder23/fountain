@@ -18,10 +18,14 @@ from django.utils.decorators import method_decorator
 from django.core.mail import send_mail
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
-from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 import os
+
+@ensure_csrf_cookie
+def csrf_refresh(request):
+    from django.http import JsonResponse
+    return JsonResponse({'status': 'ok'})
 
 @require_GET
 def service_worker(request):
@@ -41,13 +45,6 @@ def manifest(request):
 def offline_view(request):
     """Offline fallback page"""
     return render(request, 'offline.html')
-
-@require_GET
-@csrf_exempt
-def csrf_refresh(request):
-    """Simple endpoint to refresh CSRF token"""
-    from django.middleware.csrf import get_token
-    return JsonResponse({'csrf_token': get_token(request)})
 
 @login_required
 def offline_sync_page(request):

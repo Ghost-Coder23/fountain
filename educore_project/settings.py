@@ -27,17 +27,22 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [
 
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
+    "http://techflex.pythonanywhere.com",
     "https://techflex.pythonanywhere.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://localhost",
     "http://127.0.0.1",
-    "https://*.academialink.co.zw",
-    "http://*.academialink.co.zw",
 ]
 
+# CSRF and Session cookie settings
+CSRF_COOKIE_SECURE = False  # Set to True in production if using HTTPS only
+SESSION_COOKIE_SECURE = False  # Set to True in production if using HTTPS only
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 # Tenant Settings
-TENANT_DOMAIN = os.environ.get('TENANT_DOMAIN', 'academialink.co.zw')
+TENANT_DOMAIN = os.environ.get('TENANT_DOMAIN', 'educore.com')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
