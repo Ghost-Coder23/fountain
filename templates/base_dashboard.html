@@ -425,6 +425,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 @media (max-width: 768px) {
   .card {
     margin-bottom: 12px;
+    border-radius: 12px;
   }
   
   .card-body {
@@ -437,6 +438,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   
   .table-responsive {
     -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
   }
   
   .table td, .table th {
@@ -464,6 +466,63 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   .sidebar {
     width: 260px;
   }
+  
+  /* Search and filter forms on mobile */
+  .d-flex.gap-2.align-items-center,
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  /* Make form inputs take full width on mobile */
+  input[name="search"],
+  select[name="class"],
+  .form-control-sm,
+  .form-select-sm {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Install banner on mobile */
+  .install-banner {
+    width: calc(100% - 30px) !important;
+    max-width: 100% !important;
+    left: 15px !important;
+    right: 15px !important;
+    transform: none !important;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+  
+  .install-banner .text {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .install-banner .btn-group {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Alert on mobile */
+  .alert {
+    padding: 12px 14px;
+  }
+  
+  /* Pagination on mobile */
+  .pagination-sm .page-link {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  /* Stat cards on mobile */
+  .stat-card {
+    padding: 14px;
+  }
+  
+  .stat-card .stat-number {
+    font-size: 1.4rem !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -473,6 +532,15 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   
   .row.g-3 > [class*="col-"] {
     width: 100%;
+  }
+  
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.875rem;
+  }
+  
+  .topbar .btn-sm {
+    padding: 6px 10px;
   }
 }
 </style>
@@ -693,6 +761,18 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 
 <div id="offline-banner"><i class="bi bi-wifi-off me-2"></i> You are currently offline. Working in local mode.</div>
 <div id="sync-indicator" class="sync-status"></div>
+<!-- Install App Banner -->
+<div class="install-banner" id="installBanner">
+  <i class="bi bi-box-arrow-down-circle icon"></i>
+  <div class="text">
+    <h6>Install AcademiaLink</h6>
+    <p>Get quick access to all features</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
+    <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
@@ -719,6 +799,66 @@ window.addEventListener('DOMContentLoaded', async () => {
         await syncManager.initialSync();
         localStorage.setItem(`synced_${tenantPrefix}`, 'true');
     }
+
+    // Initialize Install Banner
+    console.log('[InstallBanner Dashboard] Initializing install banner...');
+
+    let deferredPrompt;
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const dismissBtn = document.getElementById('dismissInstall');
+
+    // Log browser info
+    console.log('[InstallBanner Dashboard] Browser:', navigator.userAgent);
+    console.log('[InstallBanner Dashboard] Is HTTPS?', window.location.protocol === 'https:');
+    console.log('[InstallBanner Dashboard] Is localhost?', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    console.log('[InstallBanner Dashboard] Install dismissed before?', localStorage.getItem('installDismissed') === 'true');
+
+    // Check if user already dismissed
+    if (localStorage.getItem('installDismissed') !== 'true') {
+        console.log('[InstallBanner Dashboard] Waiting for beforeinstallprompt event...');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('[InstallBanner Dashboard] ✅ beforeinstallprompt event fired!');
+            e.preventDefault();
+            deferredPrompt = e;
+            installBanner.classList.add('show');
+            console.log('[InstallBanner Dashboard] Showing install banner!');
+        });
+    } else {
+        console.log('[InstallBanner Dashboard] Install banner was previously dismissed - not showing.');
+    }
+
+    // App installed event
+    window.addEventListener('appinstalled', (e) => {
+        console.log('[InstallBanner Dashboard] ✅ App installed successfully!');
+        installBanner.classList.remove('show');
+        deferredPrompt = null;
+    });
+
+    // Install button click
+    installBtn.addEventListener('click', async () => {
+        console.log('[InstallBanner Dashboard] Install button clicked!');
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[InstallBanner Dashboard] User choice outcome:', outcome);
+            if (outcome === 'accepted') {
+                console.log('[InstallBanner Dashboard] User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            installBanner.classList.remove('show');
+        } else {
+            console.warn('[InstallBanner Dashboard] No deferredPrompt available - cannot show install prompt.');
+        }
+    });
+
+    // Dismiss button click
+    dismissBtn.addEventListener('click', () => {
+        console.log('[InstallBanner Dashboard] Dismiss button clicked!');
+        installBanner.classList.remove('show');
+        localStorage.setItem('installDismissed', 'true');
+    });
 });
 
 // Service Worker Registration (separate, not blocking)

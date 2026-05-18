@@ -53,6 +53,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;}
 .install-banner .text h6 { margin: 0 0 0.25rem; font-weight: 700; }
 .install-banner .text p { margin: 0; font-size: 0.875rem; color: #64748b; }
 .install-banner .btn-group { display: flex; gap: 0.5rem; }
+
+/* Install Banner Mobile */
+@media (max-width: 768px) {
+  .install-banner {
+    width: calc(100% - 30px) !important;
+    max-width: 100% !important;
+    left: 15px !important;
+    right: 15px !important;
+    transform: none !important;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+  
+  .install-banner .text {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .install-banner .btn-group {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>
 {% block extra_css %}{% endblock %}
 </head>
@@ -130,49 +153,78 @@ body{font-family:'Segoe UI',system-ui,sans-serif;}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // PWA Install Banner and Service Worker
+console.log('[InstallBanner] Initializing install banner...');
+
 let deferredPrompt;
 const installBanner = document.getElementById('installBanner');
 const installBtn = document.getElementById('installBtn');
 const dismissBtn = document.getElementById('dismissInstall');
 
+// Log browser info
+console.log('[InstallBanner] Browser:', navigator.userAgent);
+console.log('[InstallBanner] Is HTTPS?', window.location.protocol === 'https:');
+console.log('[InstallBanner] Is localhost?', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+console.log('[InstallBanner] Install dismissed before?', localStorage.getItem('installDismissed') === 'true');
+
 // Check if user already dismissed
 if (localStorage.getItem('installDismissed') !== 'true') {
+  console.log('[InstallBanner] Waiting for beforeinstallprompt event...');
+  
   window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('[InstallBanner] ✅ beforeinstallprompt event fired!');
     e.preventDefault();
     deferredPrompt = e;
     installBanner.classList.add('show');
+    console.log('[InstallBanner] Showing install banner!');
   });
+} else {
+  console.log('[InstallBanner] Install banner was previously dismissed - not showing.');
 }
+
+// App installed event
+window.addEventListener('appinstalled', (e) => {
+  console.log('[InstallBanner] ✅ App installed successfully!');
+  installBanner.classList.remove('show');
+  deferredPrompt = null;
+});
 
 // Install button click
 installBtn.addEventListener('click', async () => {
+  console.log('[InstallBanner] Install button clicked!');
   if (deferredPrompt) {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    console.log('[InstallBanner] User choice outcome:', outcome);
     if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
+      console.log('[InstallBanner] User accepted the install prompt');
     }
     deferredPrompt = null;
     installBanner.classList.remove('show');
+  } else {
+    console.warn('[InstallBanner] No deferredPrompt available - cannot show install prompt.');
   }
 });
 
 // Dismiss button click
 dismissBtn.addEventListener('click', () => {
+  console.log('[InstallBanner] Dismiss button clicked!');
   installBanner.classList.remove('show');
   localStorage.setItem('installDismissed', 'true');
 });
 
 // Register service worker
 if ('serviceWorker' in navigator) {
+  console.log('[InstallBanner] Service Worker API available');
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('ServiceWorker registration successful');
+      console.log('[InstallBanner] ServiceWorker registration successful with scope:', registration.scope);
     } catch (error) {
-      console.log('ServiceWorker registration failed:', error);
+      console.error('[InstallBanner] ServiceWorker registration failed:', error);
     }
   });
+} else {
+  console.warn('[InstallBanner] Service Worker API not available');
 }
 </script>
 {% block extra_js %}{% endblock %}
