@@ -115,24 +115,20 @@ function copyRegistrationLink() {
     });
 }
 
-// Toggle custom weights section based on grading system selection
-document.addEventListener('DOMContentLoaded', function() {
-    const gradingSystemSelect = document.querySelector('select[name="grading_system"]');
+function toggleCustomWeights() {
+    const gradingSystem = document.querySelector('select[name="grading_system"]').value;
     const customWeightsSection = document.getElementById('custom-weights-section');
     
-    function toggleCustomWeights() {
-        if (gradingSystemSelect.value === 'custom_weights') {
-            customWeightsSection.style.display = 'flex';
-        } else {
-            customWeightsSection.style.display = 'none';
-        }
+    if (gradingSystem === 'custom_weights') {
+        customWeightsSection.style.display = 'flex';
+    } else {
+        customWeightsSection.style.display = 'none';
     }
-    
-    // Initial toggle on page load
+}
+
+document.addEventListener('DOMContentLoaded', function() {
     toggleCustomWeights();
-    
-    // Toggle when selection changes
-    gradingSystemSelect.addEventListener('change', toggleCustomWeights);
+    document.querySelector('select[name="grading_system"]').addEventListener('change', toggleCustomWeights);
 });
 </script>
 </div>
