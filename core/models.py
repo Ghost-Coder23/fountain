@@ -1,6 +1,5 @@
 import uuid
 from django.db import models
-from .middleware import get_current_school
 
 class SyncBaseModel(models.Model):
     """Base model for all objects that need to be synced offline"""
@@ -14,10 +13,6 @@ class SyncBaseModel(models.Model):
         abstract = True
 
 class TenantManager(models.Manager):
-    """Manager to automatically filter querysets by the current school (tenant)"""
+    """Manager for single-tenancy (just returns all objects)"""
     def get_queryset(self):
-        queryset = super().get_queryset()
-        school = get_current_school()
-        if school:
-            return queryset.filter(school=school)
-        return queryset
+        return super().get_queryset()

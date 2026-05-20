@@ -12,7 +12,7 @@
  *  7. api-cache: kept separate but eviction is now handled (old api- caches cleaned on activate)
  */
 
-const CACHE_NAME = 'educore-static-v27';
+const CACHE_NAME = 'educore-static-v28';
 
 const ALLOWED_CDN_HOSTS = [
     'cdn.jsdelivr.net',
@@ -168,8 +168,25 @@ async function handleHtmlRequest(event, url) {
     // Warming requests: only use network (to populate cache)
     if (isWarming && !cachedResponse) return networkFetch;
 
-    // Everyone else: cache-first, network fallback
-    return cachedResponse || networkFetch;
+    // Network-first, cache fallback for HTML
+    try {
+        return await networkFetch;
+    } catch (err) {
+        if (cachedResponse) return cachedResponse;
+        
+        // Try normalised URL
+        const altResponse = await caches.match(normalizedHref, { ignoreSearch: true });
+        if (altResponse) return altResponse;
+        
+        if (event.request.mode === 'navigate' && !isWarming) {
+            const dashResponse = await caches.match('/analytics/dashboard/');
+            if (dashResponse) return dashResponse;
+            const offlineResponse = await caches.match('/offline/');
+            if (offlineResponse) return offlineResponse;
+        }
+        
+        throw err;
+    }
 }
 
 async function handleAssetRequest(event, url) {

@@ -282,6 +282,7 @@
   </div>
 
   <div class="row g-3 mb-4">
+    {% if role != 'secretary' %}
     <div class="col-lg-7">
       <div class="card dashboard-card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -333,6 +334,45 @@
         </div>
       </div>
     </div>
+    {% else %}
+    <div class="col-12">
+      <div class="card dashboard-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-receipt me-2"></i>Invoices Overview</span>
+          <a href="{% url 'fees:home' %}" class="btn btn-sm btn-outline-primary">Manage Fees</a>
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-3">
+              <div class="mini-metric">
+                <div class="mini-value text-warning">{{ unpaid_invoices }}</div>
+                <div class="mini-label">Unpaid</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="mini-metric">
+                <div class="mini-value text-info">{{ partial_invoices }}</div>
+                <div class="mini-label">Partial</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="mini-metric">
+                <div class="mini-value text-danger">{{ overdue_invoices }}</div>
+                <div class="mini-label">Overdue</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="mini-metric">
+                <div class="mini-value text-secondary">{{ pending_payments_count }}</div>
+                <div class="mini-label">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if role != 'secretary' %}
     <div class="col-lg-5">
       <div class="card dashboard-card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -369,8 +409,107 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header"><i class="bi bi-lightning-charge me-2"></i>Quick Actions</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'academics:student_add' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-person-plus text-primary"></i>
+                <span>Enroll Student</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'academics:teacher_add' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-person-badge text-success"></i>
+                <span>Add Teacher</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:create_invoice' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-receipt text-warning"></i>
+                <span>Create Invoice</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:bulk_invoice' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-stack text-info"></i>
+                <span>Bulk Invoices</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:invoice_list' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-cash-coin text-success"></i>
+                <span>Record Payment</span>
+              </a>
+            </div>
+            {% if role in 'admin,headmaster' %}
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:payment_config' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-gear text-secondary"></i>
+                <span>Payment Config</span>
+              </a>
+            </div>
+            {% endif %}
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'inventory:add_item' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-box-seam text-primary"></i>
+                <span>Add Asset</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if role == 'secretary' %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-calendar-check me-2"></i>Today's Attendance</span>
+          <a href="{% url 'attendance:report' %}" class="btn btn-sm btn-outline-primary">Open Report</a>
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="mini-metric">
+                <div class="mini-value text-success">{{ classes_marked_today }}</div>
+                <div class="mini-label">Marked</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mini-metric">
+                <div class="mini-value text-warning">{{ classes_not_marked }}</div>
+                <div class="mini-label">Not Marked</div>
+              </div>
+            </div>
+          </div>
+          {% if total_classes %}
+            {% widthratio classes_marked_today total_classes 100 as attendance_pct %}
+          {% else %}
+            {% widthratio 0 1 100 as attendance_pct %}
+          {% endif %}
+          <div class="d-flex justify-content-between section-note mb-1">
+            <span>Completion</span>
+            <span>{{ attendance_pct|default:0 }}%</span>
+          </div>
+          <div class="progress" style="height:8px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ attendance_pct|default:0 }}%" aria-valuenow="{{ attendance_pct|default:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if role != 'secretary' %}
   <div class="row g-3 mb-4">
     <div class="col-lg-8">
       <div class="card dashboard-card h-100">
@@ -414,7 +553,42 @@
       </div>
     </div>
   </div>
+  {% else %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card h-100">
+        <div class="card-header"><i class="bi bi-activity me-2"></i>Live Activity Feed</div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+          <div class="list-group list-group-flush">
+            {% for activity in activity_feed %}
+            <div class="list-group-item border-0 py-3">
+              <div class="d-flex align-items-start gap-3">
+                <div class="activity-icon bg-{{ activity.color }} bg-opacity-10 text-{{ activity.color }} rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; min-width: 32px;">
+                  <i class="bi {{ activity.icon }} small"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h6 class="mb-0 small fw-bold">{{ activity.title }}</h6>
+                    <small class="text-muted" style="font-size: 0.7rem;">{{ activity.time|timesince }} ago</small>
+                  </div>
+                  <p class="text-muted small mb-0">{{ activity.desc }}</p>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-wind fs-2 d-block mb-2"></i>
+              No recent activity found.
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
+  {% if role != 'secretary' %}
   <div class="row g-3 mb-4">
     <div class="col-lg-8">
       <div class="card dashboard-card">
@@ -441,60 +615,7 @@
       </div>
     </div>
   </div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-12">
-      <div class="card dashboard-card">
-        <div class="card-header"><i class="bi bi-lightning-charge me-2"></i>Quick Actions</div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'academics:student_add' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-person-plus text-primary"></i>
-                <span>Enroll Student</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'academics:teacher_add' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-person-badge text-success"></i>
-                <span>Add Teacher</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:create_invoice' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-receipt text-warning"></i>
-                <span>Create Invoice</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:bulk_invoice' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-stack text-info"></i>
-                <span>Bulk Invoices</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:invoice_list' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-cash-coin text-success"></i>
-                <span>Record Payment</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:payment_config' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-gear text-secondary"></i>
-                <span>Payment Config</span>
-              </a>
-            </div>
-            <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'inventory:add_item' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-box-seam text-primary"></i>
-                <span>Add Asset</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% endif %}
 
   <div class="row g-3">
     <div class="col-lg-4">
@@ -526,16 +647,18 @@
         </div>
         <div class="card-body p-0">
           <table class="table soft-table table-hover mb-0">
-            <thead><tr><th>Student</th><th>Amount</th><th>Status</th></tr></thead>
+            <thead><tr><th>Student</th>{% if role != 'secretary' %}<th>Amount</th>{% endif %}<th>Status</th></tr></thead>
             <tbody>
               {% for inv in recent_invoices %}
               <tr>
                 <td><a href="{% url 'fees:invoice_detail' inv.pk %}">{{ inv.student.user.get_full_name }}</a></td>
+                {% if role != 'secretary' %}
                 <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
-                <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ inv.get_status_display }}</span></td>
+                {% endif %}
+                <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
               </tr>
               {% empty %}
-              <tr><td colspan="3" class="text-muted text-center py-3">No invoices yet.</td></tr>
+              <tr><td colspan="{% if role == 'secretary' %}2{% else %}3{% endif %}" class="text-muted text-center py-3">No invoices yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -550,16 +673,18 @@
         </div>
         <div class="card-body p-0">
           <table class="table soft-table table-hover mb-0">
-            <thead><tr><th>Student</th><th>Amount</th><th>Method</th></tr></thead>
+            <thead><tr><th>Student</th>{% if role != 'secretary' %}<th>Amount</th>{% endif %}<th>Method</th></tr></thead>
             <tbody>
               {% for pay in recent_payments %}
               <tr>
                 <td><a href="{% url 'fees:invoice_detail' pay.invoice.pk %}">{{ pay.invoice.student.user.get_full_name }}</a></td>
+                {% if role != 'secretary' %}
                 <td><span class="money-amount">{{ pay.currency }} {{ pay.amount }}</span></td>
+                {% endif %}
                 <td><span class="badge {% if pay.status == 'confirmed' %}bg-success{% elif pay.status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ pay.get_method_display }}</span></td>
               </tr>
               {% empty %}
-              <tr><td colspan="3" class="text-muted text-center py-3">No payments yet.</td></tr>
+              <tr><td colspan="{% if role == 'secretary' %}2{% else %}3{% endif %}" class="text-muted text-center py-3">No payments yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>

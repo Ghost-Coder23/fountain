@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 """Notifications views"""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -9,7 +10,7 @@ from schools.models import SchoolUser
 
 @login_required
 def notification_list(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     if school_user.role in ('student', 'parent'):
         notifications = Notification.objects.filter(
@@ -35,14 +36,14 @@ def mark_read(request, pk):
 
 @login_required
 def unread_count(request):
-    school = request.school
+    school = get_default_school()
     count = Notification.objects.filter(recipient=request.user, school=school, is_read=False).count()
     return JsonResponse({'count': count})
 
 
 @login_required
 def announcements(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     active = Announcement.objects.filter(school=school, is_active=True)
     return render(request, 'notifications/announcements.html', {
@@ -53,7 +54,7 @@ def announcements(request):
 
 @login_required
 def create_announcement(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     if school_user and school_user.role not in ('headmaster', 'admin'):
         from django.contrib import messages

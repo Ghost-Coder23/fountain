@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 """
 EduCore API Views — Fixed
 FIXES:
@@ -40,7 +41,7 @@ class InitialSyncView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        school = request.school
+        school = get_default_school()
         if not school:
             return Response({"error": "School context not found"}, status=404)
 
@@ -83,7 +84,7 @@ class BatchSyncView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        school = request.school
+        school = get_default_school()
         operations = request.data.get('operations', [])
         results = []
 

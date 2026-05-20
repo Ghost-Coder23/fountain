@@ -4,7 +4,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
-    <h4 class="fw-bold mb-0">Finance Command Center</h4>
+    <h4 class="fw-bold mb-0"></h4>
     <p class="text-muted small">Track revenue, spending, and school net position.</p>
   </div>
   <div class="d-flex gap-2">
@@ -14,6 +14,7 @@
   </div>
 </div>
 
+{% if not is_secretary %}
 <div class="row g-3 mb-4">
   <div class="col-md-3">
     <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -52,6 +53,18 @@
     </div>
   </div>
 </div>
+{% else %}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-body">
+        <h5 class="fw-bold mb-0">Finance Operations</h5>
+        <p class="text-muted small mb-0">Record payments, create invoices, and manage finance workflows</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="row g-4">
   <div class="col-lg-8">
@@ -71,8 +84,12 @@
                   <div class="fw-bold">{{ inv.student.user.get_full_name }}</div>
                   <small class="text-muted">#{{ inv.invoice_number }}</small>
                 </td>
+                {% if not is_secretary %}
                 <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
-                <td><span class="badge rounded-pill {% if inv.status == 'paid' %}bg-success-subtle text-success{% elif inv.status == 'partial' %}bg-warning-subtle text-warning{% elif inv.status == 'overdue' %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
+                {% else %}
+                <td><span class="text-muted">---</span></td>
+                {% endif %}
+                <td><span class="badge rounded-pill {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
                 <td class="pe-4 text-end"><a href="{% url 'fees:invoice_detail' inv.pk %}" class="btn btn-sm btn-light">View</a></td>
               </tr>
               {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No invoices yet.</td></tr>
@@ -97,7 +114,11 @@
               <tr>
                 <td class="ps-4 fw-bold">{{ exp.title }}</td>
                 <td><span class="badge bg-light text-dark">{{ exp.category.name }}</span></td>
+                {% if not is_secretary %}
                 <td class="text-danger fw-bold"><span class="money-amount">-{{ exp.currency }} {{ exp.amount }}</span></td>
+                {% else %}
+                <td class="text-muted">---</td>
+                {% endif %}
                 <td class="pe-4 text-end text-muted small">{{ exp.date }}</td>
               </tr>
               {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No expenses recorded.</td></tr>
@@ -123,7 +144,11 @@
                 <div class="fw-bold small">{{ p.invoice.student.user.get_full_name }}</div>
                 <small class="text-muted">{{ p.get_method_display }} • {{ p.payment_date|date:"d M" }}</small>
               </div>
+              {% if not is_secretary %}
               <div class="text-success fw-bold"><span class="money-amount">+{{ p.currency }} {{ p.amount }}</span></div>
+              {% else %}
+              <div class="text-muted">Payment received</div>
+              {% endif %}
             </div>
           </div>
           {% empty %}
@@ -138,8 +163,10 @@
         <h6 class="fw-bold mb-3">Quick Actions</h6>
         <div class="d-grid gap-2">
           <a href="{% url 'fees:bulk_invoice' %}" class="btn btn-white shadow-sm text-start"><i class="bi bi-people me-2"></i>Bulk Invoicing</a>
+          {% if not is_secretary %}
           <a href="{% url 'fees:structure_list' %}" class="btn btn-white shadow-sm text-start"><i class="bi bi-list-check me-2"></i>Fee Structures</a>
           <a href="{% url 'fees:payment_config' %}" class="btn btn-white shadow-sm text-start"><i class="bi bi-gear me-2"></i>Payment Settings</a>
+          {% endif %}
         </div>
       </div>
     </div>

@@ -25,6 +25,10 @@ class SyncManager {
     init() {
         window.syncManager = this;
 
+        // Always hide banner initially
+        const banner = document.getElementById('offline-banner');
+        if (banner) banner.style.display = 'none';
+
         window.addEventListener('online', () => this.handleOnlineStatus(true));
         window.addEventListener('offline', () => this.handleOnlineStatus(false));
 
@@ -357,13 +361,16 @@ class SyncManager {
     }
 
     handleOnlineStatus(isOnline) {
+        console.log('[SyncManager] handleOnlineStatus called, isOnline:', isOnline);
         const banner = document.getElementById('offline-banner');
-        const offlineBannerShown = localStorage.getItem('offlineBannerShown');
+        const OFFLINE_BANNER_KEY = 'offlineBannerShown';
         
         if (!isOnline) {
-            if (banner && !offlineBannerShown) {
+            const hasShown = localStorage.getItem(OFFLINE_BANNER_KEY) === 'true';
+            console.log('[SyncManager] Offline, hasShown:', hasShown);
+            if (!hasShown && banner) {
                 banner.style.display = 'block';
-                localStorage.setItem('offlineBannerShown', 'true');
+                localStorage.setItem(OFFLINE_BANNER_KEY, 'true');
                 
                 // Hide after 5 seconds
                 setTimeout(() => {
@@ -374,9 +381,10 @@ class SyncManager {
             return;
         }
 
+        console.log('[SyncManager] Online, hiding banner and clearing flag');
         if (banner) banner.style.display = 'none';
         // Reset the flag when coming back online
-        localStorage.removeItem('offlineBannerShown');
+        localStorage.removeItem(OFFLINE_BANNER_KEY);
         console.log('[SyncManager] App is online. Starting sync...');
         this.flushQueue();
     }

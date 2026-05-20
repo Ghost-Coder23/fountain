@@ -93,8 +93,10 @@ class FeeInvoice(models.Model):
             self.status = 'paid'
         elif self.amount_paid > 0:
             self.status = 'partial'
-        elif self.due_date and self.due_date < timezone.now().date() and self.status == 'unpaid':
+        elif self.due_date and self.due_date < timezone.now().date():
             self.status = 'overdue'
+        else:
+            self.status = 'unpaid'
         super().save(*args, **kwargs)
 
     def generate_invoice_number(self):

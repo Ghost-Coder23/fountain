@@ -8,6 +8,8 @@ urlpatterns = [
     # Terms
     path('terms/', views.TermListView.as_view(), name='term_list'),
     path('terms/add/', views.TermCreateView.as_view(), name='term_add'),
+    path('terms/<uuid:pk>/edit/', views.TermUpdateView.as_view(), name='term_edit'),
+    path('terms/<uuid:pk>/delete/', views.TermDeleteView.as_view(), name='term_delete'),
 
 
     # Grade Scales

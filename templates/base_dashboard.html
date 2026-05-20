@@ -574,9 +574,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <a href="{% url 'academics:teacher_list' %}" class="nav-link {% if 'teachers' in request.path %}active{% endif %}">
       <i class="bi bi-person-badge"></i> Teachers
     </a>
-    {% if school_role in 'headmaster,admin' %}
+    {% if school_role in 'headmaster,admin,secretary' %}
     <a href="{% url 'academics:parent_list' %}" class="nav-link {% if 'parents' in request.path %}active{% endif %}">
       <i class="bi bi-person-heart"></i> Parents
+    </a>
+    {% endif %}
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'academics:class_level_list' %}" class="nav-link {% if 'class-levels' in request.path %}active{% endif %}">
+      <i class="bi bi-layers"></i> Class Levels
     </a>
     {% endif %}
     <a href="{% url 'academics:class_section_list' %}" class="nav-link {% if 'sections' in request.path %}active{% endif %}">
@@ -585,15 +590,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <a href="{% url 'academics:subject_list' %}" class="nav-link {% if 'subjects' in request.path %}active{% endif %}">
       <i class="bi bi-book"></i> Subjects
     </a>
-    <a href="{% url 'timetable:dashboard' %}" class="nav-link {% if 'timetable' in request.path %}active{% endif %}">
-      <i class="bi bi-calendar-week"></i> Timetables
-    </a>
 
     <div class="nav-section">Attendance</div>
     <a href="{% url 'attendance:home' %}" class="nav-link {% if 'attendance' in request.path and 'report' not in request.path %}active{% endif %}">
       <i class="bi bi-calendar-check"></i> Mark Attendance
     </a>
-    {% if school_role in 'headmaster,admin' %}
+    {% if school_role in 'headmaster,admin,secretary' %}
     <a href="{% url 'attendance:report' %}" class="nav-link {% if 'report' in request.path %}active{% endif %}">
       <i class="bi bi-bar-chart"></i> Attendance Reports
     </a>
@@ -615,7 +617,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     {% endif %}
     {% endif %}
 
-    {% if school_role == 'admin' %}
+    {% if school_role in 'admin,secretary' %}
     <div class="nav-section">Finance</div>
     <a href="{% url 'fees:home' %}" class="nav-link {% if 'fees' in request.path and 'expenses' not in request.path and 'invoices' not in request.path and 'structures' not in request.path %}active{% endif %}">
       <i class="bi bi-cash-stack"></i> Finance Dashboard
@@ -626,9 +628,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <a href="{% url 'fees:expense_list' %}" class="nav-link {% if 'expenses' in request.path %}active{% endif %}">
       <i class="bi bi-dash-circle"></i> Expenses
     </a>
+    {% if school_role == 'admin' %}
+    {% if school_role in 'admin,headmaster' %}
     <a href="{% url 'fees:structure_list' %}" class="nav-link {% if 'structures' in request.path %}active{% endif %}">
       <i class="bi bi-list-check"></i> Fee Structures
     </a>
+    {% endif %}
+    {% endif %}
     <div class="nav-section">Inventory</div>
     <a href="{% url 'inventory:dashboard' %}" class="nav-link {% if 'inventory' in request.path %}active{% endif %}">
       <i class="bi bi-box-seam"></i> Inventory
@@ -636,9 +642,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     {% endif %}
 
     <div class="nav-section">Communication</div>
+    {% if school_role != 'secretary' %}
     <a href="{% url 'messaging:list' %}" class="nav-link {% if 'messages' in request.path %}active{% endif %}">
       <i class="bi bi-chat-left-text"></i> Messages
     </a>
+    {% endif %}
     <a href="{% url 'notifications:announcements' %}" class="nav-link {% if 'announcements' in request.path %}active{% endif %}">
       <i class="bi bi-megaphone"></i> Announcements
     </a>
@@ -653,25 +661,36 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     {% endif %}
 
     <div class="nav-section">Settings</div>
+    {% if school_role in 'headmaster,admin' %}
+    <a href="{% url 'school_settings' %}" class="nav-link {% if 'school_settings' in request.path %}active{% endif %}">
+      <i class="bi bi-gear-fill"></i> School Settings
+    </a>
+    {% endif %}
+    {% if school_role == 'headmaster' %}
     <a href="{% url 'academics:academic_year_list' %}" class="nav-link {% if 'years' in request.path %}active{% endif %}">
       <i class="bi bi-calendar-range"></i> Academic Years
     </a>
+    {% endif %}
+    {% if school_role != 'secretary' %}
     <a href="{% url 'results:term_list' %}" class="nav-link {% if 'terms' in request.path %}active{% endif %}">
       <i class="bi bi-calendar3"></i> Terms
     </a>
-    {% if school_role in 'headmaster,admin' %}
+    {% endif %}
+    {% if school_role in 'headmaster,admin,secretary' %}
     <a href="{% url 'academics:teacher_assignment_list' %}" class="nav-link {% if 'assignments' in request.path %}active{% endif %}">
       <i class="bi bi-person-workspace"></i> Teacher Assignments
     </a>
     {% endif %}
-    {% if school_role == 'admin' %}
+    {% if school_role in 'admin,headmaster' %}
     <a href="{% url 'fees:payment_config' %}" class="nav-link {% if 'payment-config' in request.path %}active{% endif %}">
       <i class="bi bi-credit-card"></i> Payment Config
     </a>
     {% endif %}
-    <a href="{% url 'school_settings' %}" class="nav-link {% if 'settings' in request.path %}active{% endif %}">
-      <i class="bi bi-gear"></i> School Settings
+    {% if school_role in 'admin,headmaster' %}
+    <a href="{% url 'data_backup' %}" class="nav-link">
+      <i class="bi bi-hdd-rack"></i> Data Backup
     </a>
+    {% endif %}
 
     <a href="{% url 'offline_sync' %}" class="nav-link {% if request.resolver_match.url_name == 'offline_sync' %}active{% endif %}">
       <i class="bi bi-cloud-arrow-up"></i>
@@ -759,7 +778,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   </div>
 </footer>
 
-<div id="offline-banner" class="d-flex align-items-center gap-2">
+<div id="offline-banner" class="align-items-center gap-2">
     <i class="bi bi-wifi-off"></i>
     <span>You are currently offline. Working in local mode.</span>
     <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.style.display='none';"></button>
@@ -1096,104 +1115,13 @@ window.addEventListener('pageshow', (event) => {
 
 <script>
 // PWA Install Banner
-let deferredPrompt;
-const installBanner = document.getElementById('installBanner');
-const installBtn = document.getElementById('installBtn');
-const dismissBtn = document.getElementById('dismissInstall');
-
-// Check if user already dismissed
-if (localStorage.getItem('installDismissed') !== 'true') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBanner.classList.add('show');
-  });
-}
-
-// Install button click
-installBtn.addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    }
-    deferredPrompt = null;
-    installBanner.classList.remove('show');
-  }
-});
-
-// Dismiss button click
-dismissBtn.addEventListener('click', () => {
-  installBanner.classList.remove('show');
-  localStorage.setItem('installDismissed', 'true');
-});
-</script>
-
-<!-- Install App Banner -->
-<div class="install-banner" id="installBanner">
-  <i class="bi bi-box-arrow-down-circle icon"></i>
-  <div class="text">
-    <h6>Install AcademiaLink</h6>
-    <p>Get quick access to all features</p>
-  </div>
-  <div class="btn-group">
-    <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
-    <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
-  </div>
-</div>
-
-<script>
-// PWA Install Banner for Dashboard
-let deferredPrompt;
-const installBanner = document.getElementById('installBanner');
-const installBtn = document.getElementById('installBtn');
-const dismissBtn = document.getElementById('dismissInstall');
-
-// Check if user already dismissed
-if (localStorage.getItem('installDismissed') !== 'true') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBanner.classList.add('show');
-  });
-}
-
-// Install button click
-installBtn.addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    }
-    deferredPrompt = null;
-    installBanner.classList.remove('show');
-  }
-});
-
-// Dismiss button click
-dismissBtn.addEventListener('click', () => {
-  installBanner.classList.remove('show');
-  localStorage.setItem('installDismissed', 'true');
-});
-  // PWA Install Banner for Dashboard
+(function() {
   let deferredPrompt;
-  const installBanner = document.createElement('div');
-  installBanner.className = 'install-banner';
-  installBanner.id = 'installBanner';
-  installBanner.innerHTML = `
-    <i class="bi bi-box-arrow-down-circle icon"></i>
-    <div class="text">
-      <h6>Install AcademiaLink</h6>
-      <p>Get quick access to all features</p>
-    </div>
-    <div class="btn-group">
-      <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
-      <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
-    </div>
-  `;
-  document.body.appendChild(installBanner);
+  const installBanner = document.getElementById('installBanner');
+  const installBtn = document.getElementById('installBtn');
+  const dismissBtn = document.getElementById('dismissInstall');
+
+  if (!installBanner || !installBtn || !dismissBtn) return;
 
   // Check if user already dismissed
   if (localStorage.getItem('installDismissed') !== 'true') {
@@ -1204,10 +1132,7 @@ dismissBtn.addEventListener('click', () => {
     });
   }
 
-  // Add click listeners
-  const installBtn = document.getElementById('installBtn');
-  const dismissBtn = document.getElementById('dismissInstall');
-
+  // Install button click
   installBtn.addEventListener('click', async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -1220,11 +1145,12 @@ dismissBtn.addEventListener('click', () => {
     }
   });
 
+  // Dismiss button click
   dismissBtn.addEventListener('click', () => {
     installBanner.classList.remove('show');
     localStorage.setItem('installDismissed', 'true');
   });
-
+})();
 </script>
 {% block extra_js %}{% endblock %}
 </body>

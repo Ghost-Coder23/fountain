@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -7,7 +8,7 @@ from schools.models import School
 
 @login_required
 def inventory_dashboard(request):
-    school = request.school
+    school = get_default_school()
     categories = AssetCategory.objects.filter(school=school)
     assets = AssetItem.objects.filter(school=school)
     return render(request, 'inventory/dashboard.html', {
@@ -18,7 +19,7 @@ def inventory_dashboard(request):
 
 @login_required
 def add_asset_category(request):
-    school = request.school
+    school = get_default_school()
     if request.method == 'POST':
         form = AssetCategoryForm(request.POST)
         if form.is_valid():
@@ -33,7 +34,7 @@ def add_asset_category(request):
 
 @login_required
 def add_asset_item(request):
-    school = request.school
+    school = get_default_school()
     if request.method == 'POST':
         form = AssetItemForm(request.POST)
         if form.is_valid():

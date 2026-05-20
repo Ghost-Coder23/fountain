@@ -1,10 +1,10 @@
-"""Context processors for school-wide template variables"""
-from schools.models import SchoolUser
+"""Context processors for school-wide template variables (single-tenancy mode)"""
+from schools.models import SchoolUser, School
 
 
 def school_context(request):
     """Add school and user role to every template context"""
-    school = getattr(request, 'school', None)
+    school = School.objects.first()
     school_role = ''
     if school and request.user.is_authenticated:
         try:

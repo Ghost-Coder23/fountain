@@ -1,5 +1,5 @@
 """
-Schools views - Public website and school management
+Schools views - Public website and school management (single-tenancy mode)
 """
 from datetime import date
 
@@ -51,7 +51,7 @@ def offline_sync_page(request):
     """Page for managing offline sync operations"""
     return render(request, 'schools/offline_sync.html')
 
-from core.utils import SchoolRoleMixin, send_welcome_email
+from core.utils import SchoolRoleMixin, send_welcome_email, get_default_school
 from .models import School, SchoolUser, GalleryItem
 from .forms import SchoolRegistrationForm, SchoolBrandingForm, AddSchoolUserForm, ParentRegistrationForm, SchoolUserEditForm, SchoolUserSignatureForm
 
@@ -107,14 +107,14 @@ class HomeView(TemplateView):
         return context
 
 
-class FeaturesView(TemplateView):
-    """Features page"""
-    template_name = 'schools/features.html'
+# class FeaturesView(TemplateView):
+#     """Features page"""
+#     template_name = 'schools/features.html'
 
 
-class PricingView(TemplateView):
-    """Pricing page"""
-    template_name = 'schools/pricing.html'
+# class PricingView(TemplateView):
+#     """Pricing page"""
+#     template_name = 'schools/pricing.html'
 
 
 class ContactView(TemplateView):
@@ -165,78 +165,59 @@ class TermsAndConditionsView(TemplateView):
     template_name = 'schools/terms_and_conditions.html'
 
 
-class SchoolRegistrationView(CreateView):
-    """School self-registration view"""
-    model = School
-    form_class = SchoolRegistrationForm
-    template_name = 'schools/register_school.html'
-    success_url = reverse_lazy('registration_pending')
+# class SchoolRegistrationView(CreateView):
+#     """School self-registration view"""
+#     model = School
+#     form_class = SchoolRegistrationForm
+#     template_name = 'schools/register_school.html'
+#     success_url = reverse_lazy('registration_pending')
 
-    def form_valid(self, form):
-        try:
-            with transaction.atomic():
-                # Create school
-                school = form.save(commit=False)
-                school.status = 'pending'
-                # Use headmaster email as the primary school contact during registration
-                school.email = form.cleaned_data['headmaster_email']
-                school.save()
+#     def form_valid(self, form):
+#         try:
+#             with transaction.atomic():
+#                 # Create school
+#                 school = form.save(commit=False)
+#                 school.status = 'active'
+#                 # Use headmaster email as the primary school contact during registration
+#                 school.email = form.cleaned_data['headmaster_email']
+#                 school.save()
 
-                # Create headmaster user
-                user = User.objects.create_user(
-                    username=form.cleaned_data['headmaster_email'],
-                    email=form.cleaned_data['headmaster_email'],
-                    password=form.cleaned_data['headmaster_password'],
-                    first_name=form.cleaned_data['headmaster_first_name'],
-                    last_name=form.cleaned_data['headmaster_last_name']
-                )
+#                 # Create headmaster user
+#                 user = User.objects.create_user(
+#                     username=form.cleaned_data['headmaster_email'],
+#                     email=form.cleaned_data['headmaster_email'],
+#                     password=form.cleaned_data['headmaster_password'],
+#                     first_name=form.cleaned_data['headmaster_first_name'],
+#                     last_name=form.cleaned_data['headmaster_last_name']
+#                 )
 
-                # Create SchoolUser link
-                SchoolUser.objects.create(
-                    user=user,
-                    school=school,
-                    role='headmaster',
-                    is_active=True
-                )
+#                 # Create SchoolUser link
+#                 SchoolUser.objects.create(
+#                     user=user,
+#                     school=school,
+#                     role='headmaster',
+#                     is_active=True
+#                 )
 
-                # Send notification to platform owner
-                self.notify_platform_owner(school)
+#                 messages.success(
+#                     self.request, 
+#                     f'Registration successful! Your school "{school.name}" is ready.'
+#                 )
 
-                messages.success(
-                    self.request, 
-                    f'Registration successful! Your school "{school.name}" is pending approval. '
-                    f'You will be notified at {school.email} once approved.'
-                )
+#                 # Auto-login the new headmaster
+#                 auth_user = authenticate(
+#                     self.request,
+#                     username=user.username,
+#                     password=form.cleaned_data['headmaster_password']
+#                 )
+#                 if auth_user:
+#                     login(self.request, auth_user)
 
-                # Auto-login the new headmaster
-                auth_user = authenticate(
-                    self.request,
-                    username=user.username,
-                    password=form.cleaned_data['headmaster_password']
-                )
-                if auth_user:
-                    login(self.request, auth_user)
+#                 return redirect('dashboard')
 
-                return redirect('registration_pending')
-
-        except Exception as e:
-            messages.error(self.request, f'Registration failed: {str(e)}')
-            return self.form_invalid(form)
-
-    def notify_platform_owner(self, school):
-        """Send email notification to platform owner"""
-        try:
-            send_mail(
-                subject=f'New School Registration: {school.name}',
-                message=f'A new school "{school.name}" has registered and is pending approval.\n'
-                        f'Subdomain: {school.subdomain}\n'
-                        f'Email: {school.email}',
-                from_email='noreply@educore.com',
-                recipient_list=['admin@educore.com'],
-                fail_silently=True
-            )
-        except:
-            pass
+#         except Exception as e:
+#             messages.error(self.request, f'Registration failed: {str(e)}')
+#             return self.form_invalid(form)
 
 
 # School Admin Views (require login and school membership)
@@ -249,130 +230,6 @@ class DashboardView(TemplateView):
         # Single source of truth for role-based dashboards lives in analytics.views.dashboard
         return redirect('analytics:dashboard')
 
-    def render_headmaster_dashboard(self, request, school):
-        from results.models import TermSummary, StudentResult
-        from academics.models import Student, ClassSection
-
-        context = {
-            'school': school,
-            'total_students': Student.objects.filter(school=school, is_active=True).count(),
-            'total_teachers': SchoolUser.objects.filter(school=school, role='teacher').count(),
-            'total_classes': ClassSection.objects.filter(school=school).count(),
-            'pending_approvals': StudentResult.objects.filter(
-                class_section__school=school,
-                status='submitted'
-            ).count(),
-            'recent_results': TermSummary.objects.filter(
-                class_section__school=school
-            ).select_related('student', 'term')[:10]
-        }
-        return render(request, 'schools/dashboard_headmaster.html', context)
-
-    def render_admin_dashboard(self, request, school):
-        from academics.models import Student, ClassSection
-        from attendance.models import AttendanceSession
-        from fees.models import FeeInvoice
-
-        today = date.today()
-        total_students = Student.objects.filter(school=school, is_active=True).count()
-        total_teachers = SchoolUser.objects.filter(
-            school=school, role='teacher', is_active=True
-        ).count()
-        total_classes = ClassSection.objects.filter(school=school).count()
-        total_parents = SchoolUser.objects.filter(
-            school=school, role='parent', is_active=True
-        ).count()
-        total_users = SchoolUser.objects.filter(school=school, is_active=True).count()
-
-        total_invoiced = FeeInvoice.objects.filter(school=school).aggregate(
-            total=Sum('amount')
-        )['total'] or 0
-        total_collected = FeeInvoice.objects.filter(school=school).aggregate(
-            total=Sum('amount_paid')
-        )['total'] or 0
-        outstanding_balance = total_invoiced - total_collected
-        overdue_invoices = FeeInvoice.objects.filter(
-            school=school,
-            status__in=['unpaid', 'partial', 'overdue'],
-            due_date__lt=today
-        ).count()
-
-        classes_marked_today = AttendanceSession.objects.filter(
-            school=school, date=today, is_finalized=True
-        ).count()
-        attendance_completion_pct = round(
-            (classes_marked_today / total_classes) * 100, 1
-        ) if total_classes else 0
-        student_teacher_ratio = round(
-            total_students / total_teachers, 1
-        ) if total_teachers else None
-
-        context = {
-            'school': school,
-            'today': today,
-            'total_students': total_students,
-            'total_teachers': total_teachers,
-            'total_classes': total_classes,
-            'total_parents': total_parents,
-            'total_users': total_users,
-            'total_invoiced': total_invoiced,
-            'total_collected': total_collected,
-            'outstanding_balance': outstanding_balance,
-            'overdue_invoices': overdue_invoices,
-            'classes_marked_today': classes_marked_today,
-            'attendance_completion_pct': attendance_completion_pct,
-            'student_teacher_ratio': student_teacher_ratio,
-        }
-        return render(request, 'schools/dashboard_admin.html', context)
-
-    def render_teacher_dashboard(self, request, school):
-        from academics.models import TeacherSubjectAssignment
-
-        assignments = TeacherSubjectAssignment.objects.filter(
-            teacher__user=request.user,
-            class_section__school=school
-        ).select_related('subject', 'class_section')
-
-        context = {
-            'school': school,
-            'assignments': assignments,
-        }
-        return render(request, 'schools/dashboard_teacher.html', context)
-
-    def render_student_dashboard(self, request, school):
-        from results.models import TermSummary
-        from academics.models import Student
-
-        try:
-            student = Student.objects.get(user=request.user, school=school)
-            summaries = TermSummary.objects.filter(student=student).select_related('term')
-
-            context = {
-                'school': school,
-                'student': student,
-                'summaries': summaries,
-            }
-            return render(request, 'schools/dashboard_student.html', context)
-        except Student.DoesNotExist:
-            messages.error(request, "Student profile not found.")
-            return redirect('home')
-
-    def render_parent_dashboard(self, request, school):
-        from academics.models import Student
-
-        # Find children linked to this parent's email
-        children = Student.objects.filter(
-            school=school,
-            parent_email=request.user.email,
-            is_active=True
-        )
-
-        context = {
-            'school': school,
-            'children': children,
-        }
-        return render(request, 'schools/dashboard_parent.html', context)
-
 
 @method_decorator(login_required, name='dispatch')
 class SchoolSettingsView(UpdateView):
@@ -383,10 +240,10 @@ class SchoolSettingsView(UpdateView):
     success_url = reverse_lazy('dashboard')
 
     def get_object(self):
-        return self.request.school
+        return get_default_school()
 
     def dispatch(self, request, *args, **kwargs):
-        school = getattr(request, 'school', None)
+        school = get_default_school()
         if school:
             membership = SchoolUser.objects.filter(user=request.user, school=school, is_active=True).first()
             if membership and membership.role not in ['headmaster', 'admin']:
@@ -407,13 +264,14 @@ class UserManagementView(ListView):
     context_object_name = 'users'
 
     def get_queryset(self):
+        school = get_default_school()
         return SchoolUser.objects.filter(
-            school=self.request.school
+            school=school
         ).select_related('user').order_by('role', 'user__last_name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['school'] = self.request.school
+        context['school'] = get_default_school()
         context['add_user_form'] = AddSchoolUserForm()
         return context
 
@@ -424,7 +282,7 @@ def add_school_user(request):
     if request.method == 'POST':
         form = AddSchoolUserForm(request.POST)
         if form.is_valid():
-            school = request.school
+            school = get_default_school()
             email = form.cleaned_data['email']
             role = form.cleaned_data['role']
 
@@ -471,7 +329,8 @@ def add_school_user(request):
 @login_required
 def school_user_edit(request, pk):
     """Edit school user details"""
-    school_user = get_object_or_404(SchoolUser, pk=pk, school=request.school)
+    school = get_default_school()
+    school_user = get_object_or_404(SchoolUser, pk=pk, school=school)
     
     class UserForm(forms.Form):
         first_name = forms.CharField()
@@ -504,7 +363,7 @@ def school_user_edit(request, pk):
         'school_user': school_user,
         'user_form': user_form,
         'school_user_form': school_user_form,
-        'school': request.school,
+        'school': school,
     }
     return render(request, 'schools/user_edit.html', context)
 
@@ -512,7 +371,8 @@ def school_user_edit(request, pk):
 @login_required
 def school_user_deactivate(request, pk):
     """Toggle school user active status"""
-    school_user = get_object_or_404(SchoolUser, pk=pk, school=request.school)
+    school = get_default_school()
+    school_user = get_object_or_404(SchoolUser, pk=pk, school=school)
 
     school_user.is_active = not school_user.is_active
     action = 'deactivated' if not school_user.is_active else 'reactivated'
@@ -529,9 +389,9 @@ class ParentRegistrationView(CreateView):
     success_url = reverse_lazy('home')
 
     def dispatch(self, request, *args, **kwargs):
-        school = getattr(request, 'school', None)
+        school = get_default_school()
         if not school:
-            messages.error(request, "School context not found.")
+            messages.error(request, "School not found.")
             return redirect('home')
         
         if not school.parent_registration_enabled:
@@ -550,18 +410,18 @@ class ParentRegistrationView(CreateView):
         kwargs = super().get_form_kwargs()
         if 'instance' in kwargs:
             kwargs.pop('instance')
-        kwargs['school'] = getattr(self.request, 'school', None)
+        kwargs['school'] = get_default_school()
         return kwargs
 
 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['school'] = self.request.school
+        context['school'] = get_default_school()
         return context
 
     def form_valid(self, form):
-        school = self.request.school
+        school = get_default_school()
         email = form.cleaned_data['parent_email']
         from academics.models import Student, ParentStudentLink
         student = Student.objects.get(
@@ -640,7 +500,8 @@ class ParentRegistrationView(CreateView):
 
 @login_required
 def upload_signature(request):
-    school_user = get_object_or_404(SchoolUser, user=request.user, school=request.school)
+    school = get_default_school()
+    school_user = get_object_or_404(SchoolUser, user=request.user, school=school)
     if request.method == 'POST':
         form = SchoolUserSignatureForm(request.POST, request.FILES, instance=school_user)
         if form.is_valid():
@@ -649,7 +510,7 @@ def upload_signature(request):
             return redirect('school_settings')
     else:
         form = SchoolUserSignatureForm(instance=school_user)
-    return render(request, 'schools/upload_signature.html', {'form': form, 'school': request.school})
+    return render(request, 'schools/upload_signature.html', {'form': form, 'school': school})
 
 
 import qrcode
@@ -660,19 +521,18 @@ from django.http import HttpResponse
 @login_required
 def registration_qr_code(request):
     """Generates a QR code for parent registration"""
-    school = request.school
+    school = get_default_school()
     if not school:
         return HttpResponse("School not found", status=404)
     
     # Construct the registration URL
-    # Use the school's subdomain and token
     base_url = request.build_absolute_uri(reverse('parent_register'))
     registration_url = f"{base_url}?token={school.registration_token}"
     
     # Generate QR code
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        error_correction=qrcode.constants.ERROR_CORRECTION_L,
         box_size=10,
         border=4,
     )
@@ -690,13 +550,13 @@ def registration_qr_code(request):
 @login_required
 def toggle_registration(request):
     """Toggles parent self-registration status"""
+    school = get_default_school()
     # Only headmaster or admin can toggle
-    membership = get_object_or_404(SchoolUser, user=request.user, school=request.school)
+    membership = get_object_or_404(SchoolUser, user=request.user, school=school)
     if membership.role not in ['headmaster', 'admin']:
         messages.error(request, "You do not have permission to perform this action.")
         return redirect('school_settings')
 
-    school = request.school
     school.parent_registration_enabled = not school.parent_registration_enabled
     school.save()
     
@@ -708,12 +568,12 @@ def toggle_registration(request):
 @login_required
 def regenerate_registration_token(request):
     """Regenerates the parent registration token (invalidates old QR codes)"""
-    membership = get_object_or_404(SchoolUser, user=request.user, school=request.school)
+    school = get_default_school()
+    membership = get_object_or_404(SchoolUser, user=request.user, school=school)
     if membership.role not in ['headmaster', 'admin']:
         messages.error(request, "You do not have permission to perform this action.")
         return redirect('school_settings')
 
-    school = request.school
     school.regenerate_registration_token()
     messages.success(request, "Registration token has been regenerated. Old QR codes are now invalid.")
     return redirect('school_settings')
@@ -747,17 +607,82 @@ self.addEventListener('activate', event => {
     return HttpResponse(content, content_type='application/javascript')
 
 
-class GalleryListView(ListView):
-    """Gallery page showing global showcase items"""
-    model = GalleryItem
-    template_name = 'schools/gallery.html'
-    context_object_name = 'gallery_items'
+import subprocess
+import tempfile
+from datetime import datetime
 
-    def get_queryset(self):
-        # Show only global items (those not tied to any school)
-        return GalleryItem.objects.filter(school__isnull=True)
+@login_required
+def data_backup(request):
+    """
+    Creates a database backup and allows users to download it.
+    Only accessible to headmaster and admin.
+    """
+    school = get_default_school()
+    membership = SchoolUser.objects.filter(user=request.user, school=school, is_active=True).first()
+    
+    if not membership or membership.role not in ['headmaster', 'admin']:
+        messages.error(request, "You don't have permission to perform this action.")
+        return redirect('dashboard')
+    
+    try:
+        # Create a temporary file for the backup
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'educore_backup_{timestamp}.sql'
+        backup_path = os.path.join(tempfile.gettempdir(), backup_filename)
+        
+        # Get database settings
+        db_settings = settings.DATABASES['default']
+        
+        if db_settings['ENGINE'] == 'django.db.backends.sqlite3':
+            # SQLite backup: just copy the file
+            import shutil
+            shutil.copy(db_settings['NAME'], backup_path)
+            backup_filename = f'educore_backup_{timestamp}.sqlite3'
+        elif db_settings['ENGINE'] == 'django.db.backends.postgresql':
+            # PostgreSQL backup using pg_dump
+            pg_dump_cmd = [
+                'pg_dump',
+                '-h', db_settings.get('HOST', 'localhost'),
+                '-p', str(db_settings.get('PORT', '5432')),
+                '-U', db_settings['USER'],
+                db_settings['NAME']
+            ]
+            env = os.environ.copy()
+            env['PGPASSWORD'] = db_settings['PASSWORD']
+            
+            with open(backup_path, 'w') as f:
+                subprocess.run(pg_dump_cmd, stdout=f, env=env, check=True)
+        else:
+            messages.error(request, "Backup not supported for current database engine.")
+            return redirect('dashboard')
+        
+        # Serve the file as download
+        with open(backup_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+        
+        # Clean up temporary file
+        os.remove(backup_path)
+        
+        messages.success(request, "Backup created successfully!")
+        return response
+        
+    except Exception as e:
+        messages.error(request, f"Backup failed: {str(e)}")
+        return redirect('dashboard')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['school'] = getattr(self.request, 'school', None)
-        return context
+
+# class GalleryListView(ListView):
+#     """Gallery page showing global showcase items"""
+#     model = GalleryItem
+#     template_name = 'schools/gallery.html'
+#     context_object_name = 'gallery_items'
+
+#     def get_queryset(self):
+#         # Show only global items (those not tied to any school)
+#         return GalleryItem.objects.filter(school__isnull=True)
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['school'] = get_default_school()
+#         return context

@@ -100,6 +100,7 @@ class SchoolUser(SyncBaseModel):
     ROLE_CHOICES = [
         ('headmaster', 'Headmaster'),
         ('admin', 'School Admin'),
+        ('secretary', 'Secretary'),
         ('teacher', 'Teacher'),
         ('student', 'Student'),
         ('parent', 'Parent'),

@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 """
 Reports views - PDF report card generation
 """
@@ -35,7 +36,7 @@ def get_grade_color(grade):
 
 @login_required
 def generate_report_card(request, student_id, term_id):
-    school = request.school
+    school = get_default_school()
     student = get_object_or_404(Student, id=student_id, school=school)
     term = get_object_or_404(Term, id=term_id, academic_year__school=school)
 
@@ -287,7 +288,7 @@ def download_report(request, pk):
 def generate_class_reports(request, class_id, term_id):
     """Generate reports for all students in a class as a zip"""
     import zipfile
-    school = request.school
+    school = get_default_school()
     class_section = get_object_or_404(ClassSection, id=class_id, school=school)
     term = get_object_or_404(Term, id=term_id, academic_year__school=school)
     students = Student.objects.filter(current_class=class_section, school=school, is_active=True)

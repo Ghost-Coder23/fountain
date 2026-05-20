@@ -14,12 +14,12 @@ from .models import AttendanceSession, AttendanceRecord
 from .forms import AttendanceSessionForm
 from academics.models import ClassSection, Student
 from schools.models import SchoolUser
-from core.utils import export_to_excel, export_to_csv
+from core.utils import export_to_excel, export_to_csv, get_default_school
 
 
 @login_required
 def attendance_home(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     today = date.today()
 
@@ -51,7 +51,7 @@ def attendance_home(request):
 
 @login_required
 def mark_attendance(request, class_id):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     class_section = get_object_or_404(ClassSection, id=class_id, school=school)
 
@@ -127,7 +127,7 @@ def mark_attendance(request, class_id):
 
 @login_required
 def attendance_report(request):
-    school = request.school
+    school = get_default_school()
     class_id = request.GET.get('class')
     month = request.GET.get('month', date.today().month)
     year = request.GET.get('year', date.today().year)
@@ -168,7 +168,7 @@ def attendance_report(request):
 
 @login_required
 def session_detail(request, session_id):
-    school = request.school
+    school = get_default_school()
     session = get_object_or_404(AttendanceSession, id=session_id, school=school)
     records = session.records.select_related('student__user').order_by('student__user__last_name')
     context = {'session': session, 'records': records, 'summary': session.get_summary()}
@@ -178,7 +178,7 @@ def session_detail(request, session_id):
 @login_required
 def export_attendance(request, format='excel'):
     """Export attendance report to Excel or CSV"""
-    school = request.school
+    school = get_default_school()
     class_id = request.GET.get('class')
     month = request.GET.get('month', date.today().month)
     year = request.GET.get('year', date.today().year)

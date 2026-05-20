@@ -22,7 +22,7 @@
           <dt class="col-5">Amount</dt><dd class="col-7 fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.amount }}</span></dd>
           <dt class="col-5">Paid</dt><dd class="col-7 text-success fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.amount_paid }}</span></dd>
           <dt class="col-5">Balance</dt><dd class="col-7 {% if invoice.balance > 0 %}text-danger{% else %}text-success{% endif %} fw-bold"><span class="money-amount">{{ invoice.currency }} {{ invoice.balance }}</span></dd>
-          <dt class="col-5">Status</dt><dd class="col-7"><span class="badge {% if invoice.status == 'paid' %}bg-success{% elif invoice.status == 'partial' %}bg-warning text-dark{% elif invoice.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ invoice.get_status_display }}</span></dd>
+          <dt class="col-5">Status</dt><dd class="col-7"><span class="badge {% if invoice.status == 'paid' %}bg-success{% elif invoice.status == 'partial' %}bg-warning text-dark{% elif invoice.status == 'unpaid' or invoice.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ invoice.get_status_display }}</span></dd>
           <dt class="col-5">Issued</dt><dd class="col-7">{{ invoice.issued_date }}</dd>
           <dt class="col-5">Due Date</dt><dd class="col-7">{{ invoice.due_date|default:"Not set" }}</dd>
           {% if invoice.notes %}<dt class="col-5">Notes</dt><dd class="col-7">{{ invoice.notes }}</dd>{% endif %}

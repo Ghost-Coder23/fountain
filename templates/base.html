@@ -9,11 +9,11 @@
 <meta name="theme-color" content="{{ current_school.theme_color|default:'#4F46E5' }}">
 <style>
 :root{
-  --primary: {{ current_school.theme_color|default:"#4F46E5" }};
-  --primary-dark: #3730a3;
+  --primary: #dc2626;
+  --primary-dark: #b91c1c;
   --navbar-height: 80px;
 }
-body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-height);}
+body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-height); background-color: #fff5f5;}
 
 /* Offline UI */
 #offline-banner {
@@ -23,18 +23,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-heig
     -webkit-backdrop-filter: blur(8px);
     color: white;
     text-align: center;
-    padding: 12px 24px;
+    padding: 8px 24px;
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    border-radius: 16px;
+    top: 90px; /* Below the navbar */
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 50px;
     z-index: 10000;
     box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     font-weight: 600;
     font-size: 0.875rem;
     border: 1px solid rgba(255,255,255,0.2);
     transition: all 0.3s ease;
-    max-width: 300px;
 }
 .sync-status {
     position: fixed;
@@ -218,26 +218,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-heig
   {% else %}
     <i class="bi bi-mortarboard-fill me-2" style="font-size: 1.5rem;"></i>
   {% endif %}
-  <span class="ms-1">{{ current_school.name|default:"AcademiaLink" }}</span>
+  <span class="ms-1">Fountain Academy</span>
 </a>
 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
   <span class="toggler-icon"></span>
 </button>
 <div class="collapse navbar-collapse" id="navMenu">
 <ul class="navbar-nav ms-auto align-items-lg-center">
-<li class="nav-item"><a class="nav-link" href="{% url 'features' %}">Features</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'gallery' %}">Gallery</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'pricing' %}">Pricing</a></li>
-<li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contact</a></li>
 {% if not user.is_authenticated %}
 	<li class="nav-item ms-lg-3 mt-3 mt-lg-0">
     <a class="btn btn-nav-login w-100" href="{% url 'accounts:login' %}">
       <i class="bi bi-box-arrow-in-right me-1"></i>Login
-    </a>
-  </li>
-  <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-    <a class="btn btn-nav-cta w-100" href="{% url 'contact' %}">
-      Talk To Us
     </a>
   </li>
 {% else %}
@@ -264,17 +255,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-heig
           {% else %}
             <i class="bi bi-mortarboard-fill me-2"></i>
           {% endif %}
-          {{ current_school.name|default:"AcademiaLink" }}
+          Fountain Academy
         </div>
-        <p class="mb-2">Multi-tenant school management platform for academics, attendance, results, parent engagement, and finance operations.</p>
+        <p class="mb-2">All in one management platform for academics, attendance, results, parent engagement, and finance operations.</p>
         <small class="text-secondary">Built for secure, role-based school operations.</small>
       </div>
       <div class="col-6 col-lg-2">
         <div class="footer-title">Product</div>
         <div class="d-grid gap-1">
-          <a href="{% url 'features' %}">Features</a>
-          <a href="{% url 'pricing' %}">Pricing</a>
-          <a href="{% url 'contact' %}">Talk To Us</a>
           <a href="{% url 'accounts:login' %}">Login</a>
         </div>
       </div>
@@ -291,18 +279,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-heig
           <span><i class="bi bi-envelope-fill me-2"></i>bsoftdigital@gmail.com</span>
           <span><i class="bi bi-telephone-fill me-2"></i>+263 774487666</span>
           <span><i class="bi bi-clock-fill me-2"></i>Mon-Fri, 9:00 AM-5:00 PM</span>
-          <a href="{% url 'contact' %}"><i class="bi bi-chat-left-text-fill me-2"></i>Contact Form</a>
         </div>
       </div>
     </div>
     <div class="legal-note mt-4 pt-3 d-flex flex-column flex-md-row justify-content-between gap-2">
       <span>&copy; {% now "Y" %} AcademiaLink. All rights reserved.</span>
       <span>By using this site, you agree to our terms and privacy practices.</span>
+      <span> Devoped by BC.Dev</span>
     </div>
   </div>
 </footer>
 
-<div id="offline-banner" class="d-flex align-items-center gap-2">
+<div id="offline-banner" class="align-items-center gap-2">
     <i class="bi bi-wifi-off"></i>
     <span>You are currently offline. Working in local mode.</span>
     <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.style.display='none';"></button>

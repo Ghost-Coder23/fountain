@@ -7,12 +7,16 @@ from django.utils.encoding import force_bytes
 from django.template.loader import render_to_string
 from django.core.mail import send_mail
 from django.urls import reverse
-from schools.models import SchoolUser
+from schools.models import SchoolUser, School
 from django.http import HttpResponse
 import openpyxl
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import csv
+
+def get_default_school():
+    """Get the first (and only) school in single-tenancy mode"""
+    return School.objects.first()
 
 def send_welcome_email(request, user, school, is_new_user=True):
     """
@@ -22,12 +26,12 @@ def send_welcome_email(request, user, school, is_new_user=True):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     
-    # Use request.build_absolute_uri to ensure the link points to the current subdomain/domain
+    # Use request.build_absolute_uri to ensure the link points to the current domain
     reset_url = request.build_absolute_uri(
         reverse('accounts:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
     )
     
-    subject = f'Welcome to {school.name} on AcademiaLink'
+    subject = f'Welcome to {school.name}'
     message = render_to_string('accounts/welcome_email.txt', {
         'user': user,
         'school': school,
@@ -46,7 +50,7 @@ def send_welcome_email(request, user, school, is_new_user=True):
 def school_role_required(roles):
     """
     Decorator for views that checks if the user has one of the required roles 
-    in the current school context.
+    in the current school context (single-tenancy mode).
     """
     if isinstance(roles, str):
         roles = [roles]
@@ -57,9 +61,9 @@ def school_role_required(roles):
             if not request.user.is_authenticated:
                 return PermissionDenied("Authentication required")
             
-            school = getattr(request, 'school', None)
+            school = get_default_school()
             if not school:
-                return PermissionDenied("No school context found")
+                return PermissionDenied("No school found in the system")
 
             try:
                 membership = SchoolUser.objects.get(
@@ -78,16 +82,16 @@ def school_role_required(roles):
     return decorator
 
 class SchoolRoleMixin:
-    """Mixin for class-based views to enforce school role requirements."""
+    """Mixin for class-based views to enforce school role requirements (single-tenancy mode)."""
     required_roles = []
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             raise PermissionDenied("Authentication required")
 
-        school = getattr(request, 'school', None)
+        school = get_default_school()
         if not school:
-            raise PermissionDenied("No school context found")
+            raise PermissionDenied("No school found in the system")
 
         try:
             membership = SchoolUser.objects.get(

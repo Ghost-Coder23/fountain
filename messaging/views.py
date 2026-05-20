@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -9,7 +10,7 @@ from django.http import JsonResponse
 @login_required
 def conversation_list(request):
     """List all conversations for the current user in the current school"""
-    conversations = request.user.conversations.filter(school=request.school).prefetch_related('participants', 'messages')
+    conversations = request.user.conversations.filter(school=get_default_school()).prefetch_related('participants', 'messages')
     
     # Add 'other_participant' and unread count to each conversation object for the template
     for conv in conversations:
@@ -60,14 +61,14 @@ def start_conversation(request, user_id):
     
     # Check if a conversation already exists between these two in this school
     conversation = Conversation.objects.filter(
-        school=request.school,
+        school=get_default_school(),
         participants=request.user
     ).filter(
         participants=other_user
     ).first()
     
     if not conversation:
-        conversation = Conversation.objects.create(school=request.school)
+        conversation = Conversation.objects.create(school=get_default_school())
         conversation.participants.add(request.user, other_user)
     
     return redirect('messaging:chat', conversation_id=conversation.id)

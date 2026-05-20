@@ -1,10 +1,12 @@
+from core.utils import get_default_school
 """
 Analytics views - Role-specific dashboards with real data
 """
 from datetime import date, timedelta
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Avg, Sum, Q
+from django.db.models import Count, Avg, Sum, Q, Case, When
+from django.db import models
 from django.http import JsonResponse
 from django.utils import timezone
 
@@ -31,7 +33,7 @@ def get_recent_announcements(school, audiences, limit=5):
 
 @login_required
 def dashboard(request):
-    school = request.school
+    school = get_default_school()
     if not school:
         return redirect('home')
     try:
@@ -40,10 +42,10 @@ def dashboard(request):
         return redirect('home')
 
     role = membership.role
-    if role == 'headmaster':
-        return headmaster_dashboard(request, school, membership)
-    elif role == 'admin':
-        return admin_dashboard(request, school, membership)
+    if role in ['headmaster', 'admin']:
+        return headmaster_admin_dashboard(request, school, membership)
+    elif role == 'secretary':
+        return secretary_dashboard(request, school, membership)
     elif role == 'teacher':
         return teacher_dashboard(request, school, membership)
     elif role == 'parent':
@@ -53,13 +55,14 @@ def dashboard(request):
     return redirect('home')
 
 
-def headmaster_dashboard(request, school, membership):
+def headmaster_admin_dashboard(request, school, membership):
     today = date.today()
     current_term = Term.objects.filter(academic_year__school=school, is_current=True).first()
     current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
 
     total_students = Student.objects.filter(school=school, is_active=True).count()
     total_teachers = SchoolUser.objects.filter(school=school, role='teacher', is_active=True).count()
+    total_parents = SchoolUser.objects.filter(school=school, role='parent', is_active=True).count()
     total_classes = ClassSection.objects.filter(school=school).count()
     pending_approvals = StudentResult.objects.filter(class_section__school=school, status='submitted').count()
 
@@ -82,33 +85,73 @@ def headmaster_dashboard(request, school, membership):
     week_total = AttendanceRecord.objects.filter(session__in=week_sessions).count()
     week_attendance_pct = round((week_present / week_total) * 100, 1) if week_total > 0 else 0
 
-    # Fee summary (read-only overview for headmaster)
+    # Fee summary
     total_invoiced = FeeInvoice.objects.filter(school=school).aggregate(t=Sum('amount'))['t'] or 0
     from fees.models import FeePayment
     total_collected = FeePayment.objects.filter(
         invoice__school=school, status='confirmed'
     ).aggregate(t=Sum('amount'))['t'] or 0
+    total_paid = total_collected
     collection_pct = round((total_collected / total_invoiced) * 100, 1) if total_invoiced > 0 else 0
+    outstanding = total_invoiced - total_collected
     overdue_count = FeeInvoice.objects.filter(school=school, status__in=['unpaid','partial'], due_date__lt=today).count()
-    outstanding_balance = total_invoiced - total_collected
-    overdue_amount = FeeInvoice.objects.filter(
-        school=school, status__in=['unpaid', 'partial', 'overdue'], due_date__lt=today
-    ).aggregate(t=Sum('balance'))['t'] or 0
+    unpaid_invoices = FeeInvoice.objects.filter(school=school, status='unpaid').count()
+    partial_invoices = FeeInvoice.objects.filter(school=school, status='partial').count()
+    overdue_invoices = FeeInvoice.objects.filter(school=school, status='overdue').count()
+    recent_invoices = FeeInvoice.objects.filter(school=school).select_related(
+        'student__user'
+    ).order_by('-created_at')[:8]
+
+    # Recent payments
+    recent_payments = FeePayment.objects.filter(
+        invoice__school=school
+    ).select_related('invoice__student__user').order_by('-payment_date')[:8]
+
+    # Pending payments
+    pending_payments_count = FeePayment.objects.filter(
+        invoice__school=school, status='pending'
+    ).count()
 
     # At-risk students (attendance < 80% this month)
+    # Performance: batch aggregate attendance totals per student instead of per-student queries.
     month_start = today.replace(day=1)
-    at_risk_ids = []
-    for student in Student.objects.filter(school=school, is_active=True):
-        records = AttendanceRecord.objects.filter(
-            student=student, session__date__gte=month_start, session__date__lte=today
+    at_risk_rows = (
+        AttendanceRecord.objects.filter(
+            student__school=school,
+            student__is_active=True,
+            session__date__gte=month_start,
+            session__date__lte=today,
         )
-        total = records.count()
-        if total >= 5:
-            present = records.filter(status='present').count()
-            pct = (present / total) * 100
+        .values('student')
+        .annotate(
+            total=Count('id'),
+            present=Sum(
+                Case(
+                    When(status='present', then=1),
+                    default=0,
+                    output_field=models.IntegerField(),
+                )
+            ),
+        )
+        .filter(total__gte=5)
+    )
+
+    at_risk = []
+    rows_list = list(at_risk_rows)
+    if rows_list:
+        student_ids = [row['student'] for row in rows_list]
+        students = Student.objects.filter(id__in=student_ids).select_related('user', 'current_class')
+        student_map = {s.id: s for s in students}
+
+        for row in rows_list:
+            total = row.get('total') or 0
+            present = row.get('present') or 0
+            pct = (present / total) * 100 if total else 0
             if pct < 80:
-                at_risk_ids.append((student, round(pct, 1)))
-    at_risk = sorted(at_risk_ids, key=lambda x: x[1])[:10]
+                student = student_map.get(row['student'])
+                if student is not None:
+                    at_risk.append((student, round(pct, 1)))
+    at_risk = sorted(at_risk, key=lambda x: x[1])[:10]
 
     # Class performance (term summaries)
     class_performance = []
@@ -131,79 +174,7 @@ def headmaster_dashboard(request, school, membership):
             class_section__school=school, term=current_term
         ).select_related('student__user', 'class_section').order_by('-average')[:8]
 
-    # Notifications
-    unread_notifications = Notification.objects.filter(
-        recipient=request.user, school=school, is_read=False
-    ).order_by('-created_at')[:5]
-    announcements = get_recent_announcements(
-        school, ['teachers', 'parents', 'students'], limit=5
-    )
-
-    context = {
-        'role': 'headmaster',
-        'total_students': total_students,
-        'total_teachers': total_teachers,
-        'total_classes': total_classes,
-        'pending_approvals': pending_approvals,
-        'today_attendance_pct': today_attendance_pct,
-        'today_present': today_present,
-        'today_absent': today_absent,
-        'classes_marked_today': classes_marked_today,
-        'classes_unmarked_today': classes_unmarked_today,
-        'attendance_entry_pct': attendance_entry_pct,
-        'week_attendance_pct': week_attendance_pct,
-        'at_risk': at_risk,
-        'class_performance': class_performance,
-        'recent_pending': recent_pending,
-        'top_performers': top_performers,
-        'announcements': announcements,
-        'current_term': current_term,
-        'current_year': current_year,
-        'unread_notifications': unread_notifications,
-        'today': today,
-    }
-    return render(request, 'analytics/dashboard_headmaster.html', context)
-
-
-def admin_dashboard(request, school, membership):
-    today = date.today()
-    current_term = Term.objects.filter(academic_year__school=school, is_current=True).first()
-
-    total_students = Student.objects.filter(school=school, is_active=True).count()
-    total_teachers = SchoolUser.objects.filter(school=school, role='teacher', is_active=True).count()
-    total_parents = SchoolUser.objects.filter(school=school, role='parent', is_active=True).count()
-    total_classes = ClassSection.objects.filter(school=school).count()
-
-    # Fee overview & actionable metrics
-    total_invoiced = FeeInvoice.objects.filter(school=school).aggregate(t=Sum('amount'))['t'] or 0
-    from fees.models import FeePayment
-    total_paid = FeePayment.objects.filter(
-        invoice__school=school, status='confirmed'
-    ).aggregate(t=Sum('amount'))['t'] or 0
-    outstanding = total_invoiced - total_paid
-    unpaid_invoices = FeeInvoice.objects.filter(school=school, status='unpaid').count()
-    partial_invoices = FeeInvoice.objects.filter(school=school, status='partial').count()
-    overdue_invoices = FeeInvoice.objects.filter(school=school, status='overdue').count()
-    recent_invoices = FeeInvoice.objects.filter(school=school).select_related(
-        'student__user'
-    ).order_by('-created_at')[:8]
-
-    # Recent payments for reconciliation overview
-    recent_payments = FeePayment.objects.filter(
-        invoice__school=school
-    ).select_related('invoice__student__user').order_by('-payment_date')[:8]
-
-    # Pending reconciliation (cash payments that may need verification)
-    pending_payments_count = FeePayment.objects.filter(
-        invoice__school=school, status='pending'
-    ).count()
-
-    # Attendance today
-    today_sessions = AttendanceSession.objects.filter(school=school, date=today)
-    classes_marked = today_sessions.filter(is_finalized=True).count()
-    classes_not_marked = total_classes - classes_marked
-
-    # 1. Financial Trends (Last 6 months)
+    # Financial Trends (Last 6 months)
     finance_labels = []
     revenue_data = []
     expense_data = []
@@ -233,8 +204,7 @@ def admin_dashboard(request, school, membership):
         expense_data.append(float(exp))
         finance_labels.append(m_start.strftime('%b'))
 
-    # 3. Recent Activity Stream
-    # Combining various models to create a "live" feed
+    # Recent Activity Stream
     activity_feed = []
     
     # New Student Admissions
@@ -265,8 +235,6 @@ def admin_dashboard(request, school, membership):
         class_section__school=school
     ).select_related('student__user', 'subject', 'class_section').order_by('-updated_at')[:5]
     for r in recent_results:
-        # Convert updated_at (datetime) to date for comparison consistency if needed, 
-        # but sort is what matters here. We'll store as datetime objects.
         activity_feed.append({
             'type': 'result',
             'title': 'Result Recorded',
@@ -314,16 +282,38 @@ def admin_dashboard(request, school, membership):
         enrollment_data.append(count)
         enrollment_labels.append(m_start.strftime('%b'))
 
+    # Notifications
     unread_notifications = Notification.objects.filter(
         recipient=request.user, school=school, is_read=False
     ).order_by('-created_at')[:5]
+    announcements = get_recent_announcements(
+        school, ['teachers', 'parents', 'students'], limit=5
+    )
 
     context = {
-        'role': 'admin',
+        'role': membership.role,
         'total_students': total_students,
         'total_teachers': total_teachers,
         'total_parents': total_parents,
         'total_classes': total_classes,
+        'pending_approvals': pending_approvals,
+        'today_attendance_pct': today_attendance_pct,
+        'today_present': today_present,
+        'today_absent': today_absent,
+        'classes_marked_today': classes_marked_today,
+        'classes_unmarked_today': classes_unmarked_today,
+        'attendance_entry_pct': attendance_entry_pct,
+        'week_attendance_pct': week_attendance_pct,
+        'at_risk': at_risk,
+        'class_performance': class_performance,
+        'recent_pending': recent_pending,
+        'top_performers': top_performers,
+        'announcements': announcements,
+        'current_term': current_term,
+        'current_year': current_year,
+        'unread_notifications': unread_notifications,
+        'today': today,
+        # Admin dashboard additions
         'total_invoiced': total_invoiced,
         'total_paid': total_paid,
         'outstanding': outstanding,
@@ -335,8 +325,8 @@ def admin_dashboard(request, school, membership):
         'recent_invoices': recent_invoices,
         'recent_payments': recent_payments,
         'pending_payments_count': pending_payments_count,
-        'classes_marked_today': classes_marked,
-        'classes_not_marked': classes_not_marked,
+        'classes_marked_today_admin': classes_marked_today,
+        'classes_not_marked': classes_unmarked_today,
         'classes_data': classes_data,
         'enrollment_data': enrollment_data,
         'enrollment_labels': enrollment_labels,
@@ -344,9 +334,216 @@ def admin_dashboard(request, school, membership):
         'revenue_data': revenue_data,
         'expense_data': expense_data,
         'activity_feed': activity_feed,
+    }
+    return render(request, 'analytics/dashboard_admin.html', context)
+
+
+def secretary_dashboard(request, school, membership):
+    today = date.today()
+    current_term = Term.objects.filter(academic_year__school=school, is_current=True).first()
+    current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
+
+    total_students = Student.objects.filter(school=school, is_active=True).count()
+    total_teachers = SchoolUser.objects.filter(school=school, role='teacher', is_active=True).count()
+    total_parents = SchoolUser.objects.filter(school=school, role='parent', is_active=True).count()
+    total_classes = ClassSection.objects.filter(school=school).count()
+    pending_approvals = StudentResult.objects.filter(class_section__school=school, status='submitted').count()
+
+    # Attendance today
+    today_sessions = AttendanceSession.objects.filter(school=school, date=today)
+    today_present = AttendanceRecord.objects.filter(session__in=today_sessions, status='present').count()
+    today_absent = AttendanceRecord.objects.filter(session__in=today_sessions, status='absent').count()
+    today_total = today_present + today_absent
+    today_attendance_pct = round((today_present / today_total) * 100, 1) if today_total > 0 else 0
+    classes_marked_today = today_sessions.filter(is_finalized=True).count()
+    classes_unmarked_today = max(total_classes - classes_marked_today, 0)
+    attendance_entry_pct = round(
+        (classes_marked_today / total_classes) * 100, 1
+    ) if total_classes else 0
+
+    # Attendance this week
+    week_start = today - timedelta(days=today.weekday())
+    week_sessions = AttendanceSession.objects.filter(school=school, date__gte=week_start, date__lte=today)
+    week_present = AttendanceRecord.objects.filter(session__in=week_sessions, status='present').count()
+    week_total = AttendanceRecord.objects.filter(session__in=week_sessions).count()
+    week_attendance_pct = round((week_present / week_total) * 100, 1) if week_total > 0 else 0
+
+    # Recent invoices and payments (without showing amounts)
+    recent_invoices = FeeInvoice.objects.filter(school=school).select_related(
+        'student__user'
+    ).order_by('-created_at')[:8]
+
+    recent_payments = FeePayment.objects.filter(
+        invoice__school=school
+    ).select_related('invoice__student__user').order_by('-payment_date')[:8]
+
+    pending_payments_count = FeePayment.objects.filter(
+        invoice__school=school, status='pending'
+    ).count()
+
+    # Invoice stats
+    unpaid_invoices = FeeInvoice.objects.filter(school=school, status='unpaid').count()
+    partial_invoices = FeeInvoice.objects.filter(school=school, status='partial').count()
+    overdue_invoices = FeeInvoice.objects.filter(school=school, status='overdue').count()
+
+    # At-risk students (attendance < 80% this month)
+    month_start = today.replace(day=1)
+    at_risk_ids = []
+    for student in Student.objects.filter(school=school, is_active=True):
+        records = AttendanceRecord.objects.filter(
+            student=student, session__date__gte=month_start, session__date__lte=today
+        )
+        total = records.count()
+        if total >= 5:
+            present = records.filter(status='present').count()
+            pct = (present / total) * 100
+            if pct < 80:
+                at_risk_ids.append((student, round(pct, 1)))
+    at_risk = sorted(at_risk_ids, key=lambda x: x[1])[:10]
+
+    # Class performance (term summaries)
+    class_performance = []
+    if current_term:
+        for cs in ClassSection.objects.filter(school=school):
+            avg = TermSummary.objects.filter(class_section=cs, term=current_term).aggregate(a=Avg('average'))['a']
+            if avg:
+                class_performance.append({'class': cs, 'average': round(avg, 1)})
+        class_performance.sort(key=lambda x: x['average'], reverse=True)
+
+    # Recent results pending
+    recent_pending = StudentResult.objects.filter(
+        class_section__school=school, status='submitted'
+    ).select_related('student__user', 'subject', 'term').order_by('-updated_at')[:8]
+
+    # Top performers (current term)
+    top_performers = []
+    if current_term:
+        top_performers = TermSummary.objects.filter(
+            class_section__school=school, term=current_term
+        ).select_related('student__user', 'class_section').order_by('-average')[:8]
+
+    # Recent Activity Stream
+    activity_feed = []
+    
+    # New Student Admissions
+    new_students = Student.objects.filter(school=school).order_by('-date_joined')[:5]
+    for s in new_students:
+        activity_feed.append({
+            'type': 'admission',
+            'title': 'New Student Admission',
+            'desc': f'{s.user.get_full_name()} joined {s.current_class or "school"}',
+            'time': s.date_joined,
+            'icon': 'bi-person-plus',
+            'color': 'primary'
+        })
+        
+    # Recent Payments (without amount)
+    for p in recent_payments:
+        activity_feed.append({
+            'type': 'payment',
+            'title': 'Fee Payment Received',
+            'desc': f'Payment from {p.invoice.student.user.get_full_name()}',
+            'time': p.payment_date,
+            'icon': 'bi-cash-coin',
+            'color': 'success'
+        })
+        
+    # Recent Results
+    recent_results = StudentResult.objects.filter(
+        class_section__school=school
+    ).select_related('student__user', 'subject', 'class_section').order_by('-updated_at')[:5]
+    for r in recent_results:
+        activity_feed.append({
+            'type': 'result',
+            'title': 'Result Recorded',
+            'desc': f'{r.subject.name} score for {r.student.user.get_full_name()}',
+            'time': r.updated_at,
+            'icon': 'bi-pencil-square',
+            'color': 'info'
+        })
+        
+    # Helper to ensure everything is a datetime for sorting
+    from datetime import datetime, time
+    import pytz
+    tz = pytz.timezone('Africa/Harare')
+
+    def to_datetime(val):
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, date):
+            return tz.localize(datetime.combine(val, time.min))
+        return val
+
+    # Sort activity feed by time
+    activity_feed.sort(key=lambda x: to_datetime(x['time']), reverse=True)
+    activity_feed = activity_feed[:10]
+
+    # Students per class
+    classes_data = []
+    for cs in ClassSection.objects.filter(school=school).select_related('class_level'):
+        count = Student.objects.filter(current_class=cs, school=school, is_active=True).count()
+        classes_data.append({'class': cs, 'count': count})
+
+    # Enrollment Trends (Last 6 months)
+    enrollment_data = []
+    enrollment_labels = []
+    for i in range(5, -1, -1):
+        target_month = (today.month - i - 1) % 12 + 1
+        target_year = today.year + (today.month - i - 1) // 12
+        m_start = date(target_year, target_month, 1)
+        if target_month == 12:
+            m_end = date(target_year + 1, 1, 1)
+        else:
+            m_end = date(target_year, target_month + 1, 1)
+            
+        count = Student.objects.filter(school=school, date_joined__gte=m_start, date_joined__lt=m_end).count()
+        enrollment_data.append(count)
+        enrollment_labels.append(m_start.strftime('%b'))
+
+    # Notifications
+    unread_notifications = Notification.objects.filter(
+        recipient=request.user, school=school, is_read=False
+    ).order_by('-created_at')[:5]
+    announcements = get_recent_announcements(
+        school, ['teachers', 'parents', 'students'], limit=5
+    )
+
+    context = {
+        'role': 'secretary',
+        'total_students': total_students,
+        'total_teachers': total_teachers,
+        'total_parents': total_parents,
+        'total_classes': total_classes,
+        'pending_approvals': pending_approvals,
+        'today_attendance_pct': today_attendance_pct,
+        'today_present': today_present,
+        'today_absent': today_absent,
+        'classes_marked_today': classes_marked_today,
+        'classes_unmarked_today': classes_unmarked_today,
+        'attendance_entry_pct': attendance_entry_pct,
+        'week_attendance_pct': week_attendance_pct,
+        'at_risk': at_risk,
+        'class_performance': class_performance,
+        'recent_pending': recent_pending,
+        'top_performers': top_performers,
+        'announcements': announcements,
         'current_term': current_term,
+        'current_year': current_year,
         'unread_notifications': unread_notifications,
         'today': today,
+        # Secretary dashboard additions (without financial amounts)
+        'recent_invoices': recent_invoices,
+        'recent_payments': recent_payments,
+        'pending_payments_count': pending_payments_count,
+        'unpaid_invoices': unpaid_invoices,
+        'partial_invoices': partial_invoices,
+        'overdue_invoices': overdue_invoices,
+        'classes_marked_today_admin': classes_marked_today,
+        'classes_not_marked': classes_unmarked_today,
+        'classes_data': classes_data,
+        'enrollment_data': enrollment_data,
+        'enrollment_labels': enrollment_labels,
+        'activity_feed': activity_feed,
     }
     return render(request, 'analytics/dashboard_admin.html', context)
 
@@ -708,7 +905,7 @@ def student_dashboard(request, school, membership):
 @login_required
 def api_chart_attendance(request):
     """JSON: last 7 days school attendance %"""
-    school = request.school
+    school = get_default_school()
     today = date.today()
     data = []
     for i in range(6, -1, -1):
@@ -724,7 +921,7 @@ def api_chart_attendance(request):
 @login_required
 def api_chart_fees(request):
     """JSON: fee collection summary by month (last 6 months)"""
-    school = request.school
+    school = get_default_school()
     today = date.today()
     data = []
     for i in range(5, -1, -1):

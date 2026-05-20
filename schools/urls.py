@@ -15,4 +15,5 @@ urlpatterns = [
     path('parent/regenerate-token/', views.regenerate_registration_token, name='regenerate_registration_token'),
     path('upload-signature/', views.upload_signature, name='upload_signature'),
     path('offline-sync/', views.offline_sync_page, name='offline_sync'),
+    path('backup/', views.data_backup, name='data_backup'),
 ]

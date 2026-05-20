@@ -1,3 +1,4 @@
+from core.utils import get_default_school
 """
 Fees views - Fee structures, invoices, payments
 """
@@ -23,7 +24,7 @@ def require_role(roles):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped(request, *args, **kwargs):
-            school = request.school
+            school = get_default_school()
             su = SchoolUser.objects.filter(user=request.user, school=school).first()
             if not su or su.role not in roles:
                 messages.error(request, "You do not have permission to access this page.")
@@ -35,7 +36,7 @@ def require_role(roles):
 
 @login_required
 def fees_home(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
 
     # Income Stats
@@ -75,14 +76,15 @@ def fees_home(request):
         'recent_expenses': recent_expenses,
         'overdue_count': overdue,
         'school_user': school_user,
+        'is_secretary': school_user and school_user.role == 'secretary',
     }
     return render(request, 'fees/fees_home.html', context)
 
 
 @login_required
-@require_role(['admin', 'headmaster'])
+@require_role(['admin', 'headmaster', 'secretary'])
 def expense_list(request):
-    school = request.school
+    school = get_default_school()
     expenses = Expense.objects.filter(school=school).select_related('category')
     categories = ExpenseCategory.objects.filter(school=school)
     
@@ -118,10 +120,10 @@ def expense_list(request):
 
 
 @login_required
-@require_role(['admin', 'headmaster'])
+@require_role(['admin', 'headmaster', 'secretary'])
 def quick_payment(request):
     """View to record a payment and auto-create an invoice if it doesn't exist"""
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     form = QuickPaymentForm(school=school)
 
@@ -194,7 +196,7 @@ def quick_payment(request):
 
 @login_required
 def fee_structure_list(request):
-    school = request.school
+    school = get_default_school()
     structures = FeeStructure.objects.filter(school=school).select_related('class_level', 'academic_year', 'term')
     form = FeeStructureForm(school=school)
     if request.method == 'POST':
@@ -210,7 +212,7 @@ def fee_structure_list(request):
 
 @login_required
 def invoice_list(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     qs = FeeInvoice.objects.filter(school=school).select_related('student__user', 'fee_structure')
     if school_user and school_user.role == 'parent':
@@ -238,7 +240,7 @@ def invoice_list(request):
 
 @login_required
 def create_invoice(request):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     form = FeeInvoiceForm(school=school)
     if request.method == 'POST':
@@ -257,7 +259,7 @@ def create_invoice(request):
 
 @login_required
 def invoice_detail(request, pk):
-    school = request.school
+    school = get_default_school()
     invoice = get_object_or_404(FeeInvoice, pk=pk, school=school)
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     if school_user and school_user.role == 'parent' and invoice.student.parent_email != request.user.email:
@@ -274,7 +276,7 @@ def invoice_detail(request, pk):
 
 @login_required
 def record_payment(request, invoice_pk):
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     invoice = get_object_or_404(FeeInvoice, pk=invoice_pk, school=school)
     if request.method == 'POST':
@@ -296,7 +298,7 @@ def record_payment(request, invoice_pk):
 
 @login_required
 def student_fee_statement(request, student_id):
-    school = request.school
+    school = get_default_school()
     student = get_object_or_404(Student, id=student_id, school=school)
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     if school_user and school_user.role == 'parent' and student.parent_email != request.user.email:
@@ -320,7 +322,7 @@ def student_fee_statement(request, student_id):
 @login_required
 def bulk_invoice(request):
     """Create invoices for all students in a class for a fee structure"""
-    school = request.school
+    school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
     structures = FeeStructure.objects.filter(school=school)
     from academics.models import ClassSection
@@ -358,8 +360,9 @@ def bulk_invoice(request):
 
 
 @login_required
+@require_role(['admin', 'headmaster'])
 def payment_config(request):
-    school = request.school
+    school = get_default_school()
     config, _ = PaymentConfig.objects.get_or_create(school=school)
     form = PaymentConfigForm(instance=config)
     if request.method == 'POST':
@@ -381,7 +384,7 @@ def invoice_pdf(request, pk):
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-    school = request.school
+    school = get_default_school()
     invoice = get_object_or_404(FeeInvoice, pk=pk, school=school)
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)

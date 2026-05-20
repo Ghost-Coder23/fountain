@@ -19,20 +19,16 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*'] if DEBUG else [
-    '.educore.com',
-    'techflex.pythonanywhere.com',
+    'fountain.curated.co.zw',
     'localhost',
     '127.0.0.1',
 ]
 
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
-    "http://techflex.pythonanywhere.com",
-    "https://techflex.pythonanywhere.com",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
     "http://localhost",
     "http://127.0.0.1",
+    "https://fountain.curated.co.zw"
 ]
 
 # CSRF and Session cookie settings
@@ -84,7 +80,6 @@ MIDDLEWARE = [
 
     'middleware.tenant_middleware.SchoolMiddleware',
     'core.middleware.RateLimitMiddleware',
-    'core.middleware.CoreContextMiddleware',
 ]
 
 ROOT_URLCONF = 'educore_project.urls'

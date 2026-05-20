@@ -90,6 +90,8 @@
                     <td class="small text-muted">{{ student.parent_name }}<br>{{ student.parent_phone }}</td>
                     <td>
                         <a href="{% url 'academics:student_detail' student.pk %}" class="btn btn-xs btn-sm btn-outline-primary">View</a>
+                        <a href="{% url 'academics:student_edit' student.pk %}" class="btn btn-xs btn-sm btn-outline-warning">Edit</a>
+                        <a href="{% url 'academics:student_delete' student.pk %}" class="btn btn-xs btn-sm btn-outline-danger">Delete</a>
                         <a href="{% url 'results:student_results' student.pk %}" class="btn btn-xs btn-sm btn-outline-secondary">Results</a>
                     </td>
                 </tr>

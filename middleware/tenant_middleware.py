@@ -1,8 +1,6 @@
 """
-School Tenant Middleware - Handles subdomain-based tenant detection
-Supports subdomain routing for production and ?school= param for local dev.
+Single Tenancy Middleware - Sets the default school for all requests
 """
-from django.conf import settings
 from schools.models import School
 
 
@@ -11,49 +9,6 @@ class SchoolMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        host = request.get_host().split(':')[0]  # strip port
-        school = None
-
-        # 1. Subdomain routing (production: school.educore.com)
-        tenant_domain = getattr(settings, 'TENANT_DOMAIN', 'educore.com')
-        parts = host.split('.')
-        
-        # Check if the host ends with the tenant domain and has a subdomain
-        if host.endswith(tenant_domain):
-            subdomain = host.replace(f'.{tenant_domain}', '')
-            if subdomain and subdomain != host and subdomain not in ('www', 'admin'):
-                try:
-                    school = School.objects.get(subdomain=subdomain, status='active')
-                except School.DoesNotExist:
-                    pass
-
-        # 2. Local dev support: ?school=subdomain or school subdomain as first part of localhost
-        #    e.g. http://demo.localhost:8000
-        if school is None and host.endswith('.localhost'):
-            subdomain = host.replace('.localhost', '')
-            try:
-                school = School.objects.get(subdomain=subdomain, status='active')
-            except School.DoesNotExist:
-                pass
-
-        # 3. Local dev: ?school=subdomain query param OR session-stored school
-        if school is None:
-            subdomain_param = request.GET.get('school') or request.session.get('school_subdomain')
-            if subdomain_param:
-                try:
-                    school = School.objects.get(subdomain=subdomain_param, status='active')
-                    request.session['school_subdomain'] = subdomain_param
-                except School.DoesNotExist:
-                    pass
-
-        # 4. If user is authenticated, find their school from membership
-        if school is None and hasattr(request, 'user') and request.user.is_authenticated:
-            membership = request.user.school_memberships.select_related('school').filter(
-                is_active=True, school__status='active'
-            ).first()
-            if membership:
-                school = membership.school
-                request.session['school_subdomain'] = school.subdomain
-
+        school = School.objects.first()
         request.school = school
         return self.get_response(request)

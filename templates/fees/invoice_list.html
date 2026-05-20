@@ -44,7 +44,7 @@
             <td class="text-success"><span class="money-amount">{{ inv.currency }} {{ inv.amount_paid }}</span></td>
             <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}"><span class="money-amount">{{ inv.currency }} {{ inv.balance }}</span></td>
             <td>{{ inv.due_date|default:"-" }}</td>
-            <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
+            <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
             <td>
               <a href="{% url 'fees:invoice_detail' inv.pk %}" class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:2px 7px;">View</a>
               <a href="{% url 'fees:invoice_pdf' inv.pk %}" class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:2px 7px;"><i class="bi bi-file-pdf"></i></a>

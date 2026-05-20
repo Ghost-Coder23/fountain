@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
 
-from core.utils import SchoolRoleMixin, send_welcome_email, export_to_excel, export_to_csv
+from core.utils import SchoolRoleMixin, send_welcome_email, export_to_excel, export_to_csv, get_default_school
 from .models import AcademicYear, ClassLevel, Subject, ClassSection, Student, TeacherSubjectAssignment
 from .forms import AcademicYearForm, ClassLevelForm, SubjectForm, ClassSectionForm, StudentForm, TeacherForm, TeacherAssignmentForm
 from schools.models import SchoolUser
@@ -17,37 +17,40 @@ from schools.models import SchoolUser
 
 # Academic Year Views
 @method_decorator(login_required, name='dispatch')
-class AcademicYearListView(ListView):
+class AcademicYearListView(SchoolRoleMixin, ListView):
     model = AcademicYear
     template_name = 'academics/academic_year_list.html'
     context_object_name = 'academic_years'
+    required_roles = ['headmaster']
 
     def get_queryset(self):
-        return AcademicYear.objects.filter(school=self.request.school)
+        return AcademicYear.objects.filter(school=get_default_school())
 
 
 @method_decorator(login_required, name='dispatch')
-class AcademicYearCreateView(CreateView):
+class AcademicYearCreateView(SchoolRoleMixin, CreateView):
     model = AcademicYear
     form_class = AcademicYearForm
     template_name = 'academics/academic_year_form.html'
     success_url = reverse_lazy('academics:academic_year_list')
+    required_roles = ['headmaster']
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Academic year created successfully!')
         return super().form_valid(form)
 
 
 @method_decorator(login_required, name='dispatch')
-class AcademicYearUpdateView(UpdateView):
+class AcademicYearUpdateView(SchoolRoleMixin, UpdateView):
     model = AcademicYear
     form_class = AcademicYearForm
     template_name = 'academics/academic_year_form.html'
     success_url = reverse_lazy('academics:academic_year_list')
+    required_roles = ['headmaster']
 
     def get_queryset(self):
-        return AcademicYear.objects.filter(school=self.request.school)
+        return AcademicYear.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Academic year updated successfully!')
@@ -55,13 +58,14 @@ class AcademicYearUpdateView(UpdateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class AcademicYearDeleteView(DeleteView):
+class AcademicYearDeleteView(SchoolRoleMixin, DeleteView):
     model = AcademicYear
     template_name = 'academics/academic_year_confirm_delete.html'
     success_url = reverse_lazy('academics:academic_year_list')
+    required_roles = ['headmaster']
 
     def get_queryset(self):
-        return AcademicYear.objects.filter(school=self.request.school)
+        return AcademicYear.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Academic year deleted successfully!')
@@ -70,37 +74,40 @@ class AcademicYearDeleteView(DeleteView):
 
 # Class Level Views
 @method_decorator(login_required, name='dispatch')
-class ClassLevelListView(ListView):
+class ClassLevelListView(SchoolRoleMixin, ListView):
     model = ClassLevel
     template_name = 'academics/class_level_list.html'
     context_object_name = 'class_levels'
+    required_roles = ['headmaster', 'admin']
 
     def get_queryset(self):
-        return ClassLevel.objects.filter(school=self.request.school)
+        return ClassLevel.objects.filter(school=get_default_school())
 
 
 @method_decorator(login_required, name='dispatch')
-class ClassLevelCreateView(CreateView):
+class ClassLevelCreateView(SchoolRoleMixin, CreateView):
     model = ClassLevel
     form_class = ClassLevelForm
     template_name = 'academics/class_level_form.html'
     success_url = reverse_lazy('academics:class_level_list')
+    required_roles = ['headmaster', 'admin']
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Class level created successfully!')
         return super().form_valid(form)
 
 
 @method_decorator(login_required, name='dispatch')
-class ClassLevelUpdateView(UpdateView):
+class ClassLevelUpdateView(SchoolRoleMixin, UpdateView):
     model = ClassLevel
     form_class = ClassLevelForm
     template_name = 'academics/class_level_form.html'
     success_url = reverse_lazy('academics:class_level_list')
+    required_roles = ['headmaster', 'admin']
 
     def get_queryset(self):
-        return ClassLevel.objects.filter(school=self.request.school)
+        return ClassLevel.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Class level updated successfully!')
@@ -108,13 +115,14 @@ class ClassLevelUpdateView(UpdateView):
 
 
 @method_decorator(login_required, name='dispatch')
-class ClassLevelDeleteView(DeleteView):
+class ClassLevelDeleteView(SchoolRoleMixin, DeleteView):
     model = ClassLevel
     template_name = 'academics/class_level_confirm_delete.html'
     success_url = reverse_lazy('academics:class_level_list')
+    required_roles = ['headmaster', 'admin']
 
     def get_queryset(self):
-        return ClassLevel.objects.filter(school=self.request.school)
+        return ClassLevel.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Class level deleted successfully!')
@@ -129,7 +137,7 @@ class SubjectListView(ListView):
     context_object_name = 'subjects'
 
     def get_queryset(self):
-        return Subject.objects.filter(school=self.request.school)
+        return Subject.objects.filter(school=get_default_school())
 
 
 @method_decorator(login_required, name='dispatch')
@@ -140,7 +148,7 @@ class SubjectCreateView(CreateView):
     success_url = reverse_lazy('academics:subject_list')
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Subject created successfully!')
         return super().form_valid(form)
 
@@ -153,7 +161,7 @@ class ClassSectionListView(ListView):
     context_object_name = 'class_sections'
 
     def get_queryset(self):
-        return ClassSection.objects.filter(school=self.request.school).select_related('class_level', 'academic_year')
+        return ClassSection.objects.filter(school=get_default_school()).select_related('class_level', 'academic_year')
 
 
 @method_decorator(login_required, name='dispatch')
@@ -165,11 +173,11 @@ class ClassSectionCreateView(CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Class section created successfully!')
         return super().form_valid(form)
 
@@ -192,7 +200,7 @@ class StudentListView(ListView):
             else:
                 self.request.session['show_password_once'] = True
 
-        queryset = Student.objects.filter(school=self.request.school).select_related('user', 'current_class')
+        queryset = Student.objects.filter(school=get_default_school()).select_related('user', 'current_class')
 
         # Filter by class if provided
         class_id = self.request.GET.get('class')
@@ -214,7 +222,7 @@ class StudentListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['class_sections'] = ClassSection.objects.filter(school=self.request.school)
+        context['class_sections'] = ClassSection.objects.filter(school=get_default_school())
         return context
 
 
@@ -227,7 +235,7 @@ class StudentCreateView(CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
@@ -243,7 +251,7 @@ class StudentCreateView(CreateView):
         is_new_user = False
 
         if user:
-            if SchoolUser.objects.filter(user=user, school=self.request.school).exists():
+            if SchoolUser.objects.filter(user=user, school=get_default_school()).exists():
                 messages.warning(self.request, f"User {email} is already a member of this school.")
                 return redirect('academics:student_list')
         else:
@@ -261,18 +269,18 @@ class StudentCreateView(CreateView):
         # Create SchoolUser link
         school_user = SchoolUser.objects.create(
             user=user,
-            school=self.request.school,
+            school=get_default_school(),
             role='student',
             is_active=True
         )
 
         # Send welcome email
-        send_welcome_email(self.request, user, self.request.school, is_new_user=is_new_user)
+        send_welcome_email(self.request, user, get_default_school(), is_new_user=is_new_user)
 
         # Generate admission number: YYYY###
         current_year = datetime.now().year
         last_student = Student.objects.filter(
-            school=self.request.school,
+            school=get_default_school(),
             admission_number__startswith=str(current_year)
         ).order_by('-admission_number').first()
         if last_student and last_student.admission_number[4:].isdigit():
@@ -283,7 +291,7 @@ class StudentCreateView(CreateView):
         form.instance.admission_number = admission_number
 
         form.instance.user = user
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         form.instance.school_user = school_user
 
         messages.success(self.request, f'Student {user.get_full_name()} created successfully! Admission Number: {admission_number}')
@@ -306,7 +314,7 @@ class StudentDetailView(DetailView):
     context_object_name = 'student'
 
     def get_queryset(self):
-        return Student.objects.filter(school=self.request.school)
+        return Student.objects.filter(school=get_default_school())
 
 
 # Teacher Views
@@ -318,7 +326,7 @@ class TeacherListView(ListView):
     
     def get_queryset(self):
         return SchoolUser.objects.filter(
-            school=self.request.school,
+            school=get_default_school(),
             role='teacher',
             is_active=True
         ).select_related('user')
@@ -326,7 +334,7 @@ class TeacherListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['assignments'] = TeacherSubjectAssignment.objects.filter(
-            class_section__school=self.request.school
+            class_section__school=get_default_school()
         ).select_related('teacher__user', 'subject', 'class_section')
         context['teachers'] = self.get_queryset()
         return context
@@ -340,7 +348,7 @@ class ParentListView(ListView):
 
     def get_queryset(self):
         return SchoolUser.objects.filter(
-            school=self.request.school,
+            school=get_default_school(),
             role='parent',
             is_active=True
         ).select_related('user').prefetch_related('child_links__student')
@@ -352,11 +360,11 @@ class TeacherCreateView(SchoolRoleMixin, CreateView):
     form_class = TeacherForm
     template_name = 'academics/teacher_form.html'
     success_url = reverse_lazy('academics:teacher_list')
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'secretary']
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
@@ -368,7 +376,7 @@ class TeacherCreateView(SchoolRoleMixin, CreateView):
         is_new_user = False
 
         if user:
-            if SchoolUser.objects.filter(user=user, school=self.request.school).exists():
+            if SchoolUser.objects.filter(user=user, school=get_default_school()).exists():
                 messages.warning(self.request, f"User {email} is already a member of this school.")
                 return redirect('academics:teacher_list')
         else:
@@ -388,13 +396,13 @@ class TeacherCreateView(SchoolRoleMixin, CreateView):
         # Create SchoolUser
         school_user = form.save(commit=False)
         school_user.user = user
-        school_user.school = self.request.school
+        school_user.school = get_default_school()
         school_user.role = 'teacher'
         school_user.is_active = True
         school_user.save()
         
         # Send welcome email
-        send_welcome_email(self.request, user, self.request.school, is_new_user=is_new_user)
+        send_welcome_email(self.request, user, get_default_school(), is_new_user=is_new_user)
         
         # Create teacher-subject assignments
         subjects = cleaned_data.get('subjects', [])
@@ -406,7 +414,7 @@ class TeacherCreateView(SchoolRoleMixin, CreateView):
                     subject=subject,
                     class_section=class_section,
                     academic_year__is_current=True,  # Current year
-                    defaults={'academic_year': AcademicYear.objects.filter(school=self.request.school, is_current=True).first()}
+                    defaults={'academic_year': AcademicYear.objects.filter(school=get_default_school(), is_current=True).first()}
                 )
         
         messages.success(self.request, f'Teacher {user.get_full_name()} created and notified!')
@@ -422,7 +430,7 @@ class TeacherAssignmentListView(ListView):
 
     def get_queryset(self):
         return TeacherSubjectAssignment.objects.filter(
-            class_section__school=self.request.school
+            class_section__school=get_default_school()
         ).select_related('teacher', 'subject', 'class_section')
 
 
@@ -432,15 +440,15 @@ class TeacherAssignmentCreateView(SchoolRoleMixin, CreateView):
     form_class = TeacherAssignmentForm
     template_name = 'academics/teacher_assignment_form.html'
     success_url = reverse_lazy('academics:teacher_assignment_list')
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'secretary']
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Teacher assigned successfully!')
         return super().form_valid(form)
 
@@ -453,11 +461,11 @@ class TeacherAssignmentUpdateView(UpdateView):
     success_url = reverse_lazy('academics:teacher_assignment_list')
 
     def get_queryset(self):
-        return TeacherSubjectAssignment.objects.filter(class_section__school=self.request.school)
+        return TeacherSubjectAssignment.objects.filter(class_section__school=get_default_school())
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
@@ -472,7 +480,7 @@ class TeacherAssignmentDeleteView(DeleteView):
     success_url = reverse_lazy('academics:teacher_assignment_list')
 
     def get_queryset(self):
-        return TeacherSubjectAssignment.objects.filter(class_section__school=self.request.school)
+        return TeacherSubjectAssignment.objects.filter(class_section__school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Assignment removed successfully!')
@@ -488,7 +496,7 @@ class StudentUpdateView(UpdateView):
     success_url = reverse_lazy('academics:student_list')
 
     def get_queryset(self):
-        return Student.objects.filter(school=self.request.school)
+        return Student.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Student updated successfully!')
@@ -502,7 +510,7 @@ class StudentDeleteView(DeleteView):
     success_url = reverse_lazy('academics:student_list')
 
     def get_queryset(self):
-        return Student.objects.filter(school=self.request.school)
+        return Student.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Student deleted successfully!')
@@ -518,7 +526,7 @@ class SubjectUpdateView(UpdateView):
     success_url = reverse_lazy('academics:subject_list')
 
     def get_queryset(self):
-        return Subject.objects.filter(school=self.request.school)
+        return Subject.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Subject updated successfully!')
@@ -532,7 +540,7 @@ class SubjectDeleteView(DeleteView):
     success_url = reverse_lazy('academics:subject_list')
 
     def get_queryset(self):
-        return Subject.objects.filter(school=self.request.school)
+        return Subject.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Subject deleted successfully!')
@@ -548,7 +556,7 @@ class ClassSectionUpdateView(UpdateView):
     success_url = reverse_lazy('academics:class_section_list')
 
     def get_queryset(self):
-        return ClassSection.objects.filter(school=self.request.school)
+        return ClassSection.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Class section updated successfully!')
@@ -562,7 +570,7 @@ class ClassSectionDeleteView(DeleteView):
     success_url = reverse_lazy('academics:class_section_list')
 
     def get_queryset(self):
-        return ClassSection.objects.filter(school=self.request.school)
+        return ClassSection.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Class section deleted successfully!')
@@ -578,7 +586,7 @@ class TeacherUpdateView(UpdateView):
     success_url = reverse_lazy('academics:teacher_list')
 
     def get_queryset(self):
-        return SchoolUser.objects.filter(school=self.request.school, role='teacher')
+        return SchoolUser.objects.filter(school=get_default_school(), role='teacher')
 
     def form_valid(self, form):
         messages.success(self.request, 'Teacher updated successfully!')
@@ -592,7 +600,7 @@ class TeacherDeleteView(DeleteView):
     success_url = reverse_lazy('academics:teacher_list')
 
     def get_queryset(self):
-        return SchoolUser.objects.filter(school=self.request.school, role='teacher')
+        return SchoolUser.objects.filter(school=get_default_school(), role='teacher')
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Teacher deleted successfully!')
@@ -603,7 +611,7 @@ class TeacherDeleteView(DeleteView):
 @login_required
 def export_students(request, format='excel'):
     """Export students to Excel or CSV"""
-    queryset = Student.objects.filter(school=request.school).select_related('user', 'current_class')
+    queryset = Student.objects.filter(school=get_default_school()).select_related('user', 'current_class')
     
     # Apply same filters as student list
     class_id = request.GET.get('class')
@@ -639,7 +647,7 @@ def export_students(request, format='excel'):
             student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else ''
         ])
     
-    filename = f"students_{request.school.name.replace(' ', '_')}.xlsx" if format == 'excel' else f"students_{request.school.name.replace(' ', '_')}.csv"
+    filename = f"students_{get_default_school().name.replace(' ', '_')}.xlsx" if format == 'excel' else f"students_{get_default_school().name.replace(' ', '_')}.csv"
     
     if format == 'excel':
         return export_to_excel(data, headers, filename)

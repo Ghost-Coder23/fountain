@@ -5,9 +5,9 @@
 {% block extra_css %}
 <style>
     :root {
-        --login-primary: {{ current_school.theme_color|default:"#4F46E5" }};
-        --login-primary-dark: {{ current_school.theme_color|default:"#4338CA" }};
-        --login-primary-soft: {{ current_school.theme_color|default:"#4F46E5" }}15;
+        --login-primary: #dc2626;
+        --login-primary-dark: #b91c1c;
+        --login-primary-soft: #dc262615;
         --login-bg: #fdfdfd;
     }
 
@@ -42,7 +42,7 @@
     /* Branding Side */
     .brand-side {
         flex: 1.2;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         padding: 4rem;
         display: flex;
         flex-direction: column;
@@ -361,11 +361,6 @@
             </form>
 
             <div class="form-footer">
-                {% if not current_school %}
-                    Don't have a school portal? <a href="{% url 'register_school' %}">Create one for free</a>
-                {% else %}
-                    Having trouble? <a href="{% url 'contact' %}">Contact Support</a>
-                {% endif %}
                 <div class="mt-4">
                     <a href="{% url 'home' %}" class="text-muted text-decoration-none">
                         <i class="bi bi-house-door me-1"></i> Back to Homepage

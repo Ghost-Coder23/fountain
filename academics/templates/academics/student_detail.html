@@ -66,7 +66,13 @@
 </div>
 </div>
 <div class="mt-3">
-<a href="{% url 'results:student_results' student.pk %}" class="btn btn-primary">
+<a href="{% url 'academics:student_edit' student.pk %}" class="btn btn-warning">
+<i class="bi bi-pencil me-1"></i>Edit Student
+</a>
+<a href="{% url 'academics:student_delete' student.pk %}" class="btn btn-danger ms-2">
+<i class="bi bi-trash me-1"></i>Delete Student
+</a>
+<a href="{% url 'results:student_results' student.pk %}" class="btn btn-primary ms-2">
 <i class="bi bi-clipboard-data me-1"></i>View Results
 </a>
 <a href="{% url 'academics:student_list' %}" class="btn btn-outline-secondary ms-2">Back to List</a>

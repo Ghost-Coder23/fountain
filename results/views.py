@@ -16,40 +16,83 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.db import transaction
 
-from core.utils import SchoolRoleMixin, school_role_required
+from core.utils import SchoolRoleMixin, school_role_required, get_default_school
 from .models import Term, GradeScale, StudentResult, TermSummary, AssessmentComponent
 from .forms import TermForm, GradeScaleForm, StudentResultForm, BulkResultEntryForm, TermApprovalForm, AssessmentComponentForm
 from academics.models import Student, Subject, ClassSection, AcademicYear
 
 
 @method_decorator(login_required, name='dispatch')
-class TermListView(ListView):
+class TermListView(SchoolRoleMixin, ListView):
     model = Term
     template_name = 'results/term_list.html'
     context_object_name = 'terms'
+    required_roles = ['headmaster', 'admin']
 
     def get_queryset(self):
         return Term.objects.filter(
-            academic_year__school=self.request.school
+            academic_year__school=get_default_school()
         ).select_related('academic_year')
 
 
 @method_decorator(login_required, name='dispatch')
-class TermCreateView(CreateView):
+class TermCreateView(SchoolRoleMixin, CreateView):
     model = Term
     form_class = TermForm
     template_name = 'results/term_form.html'
     success_url = reverse_lazy('results:term_list')
+    required_roles = ['headmaster', 'admin']
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         if hasattr(form, 'fields') and 'academic_year' in form.fields:
-            form.fields['academic_year'].queryset = AcademicYear.objects.filter(school=self.request.school)
+            form.fields['academic_year'].queryset = AcademicYear.objects.filter(school=get_default_school())
         return form
 
     def form_valid(self, form):
         messages.success(self.request, 'Term created successfully!')
         return super().form_valid(form)
+
+
+@method_decorator(login_required, name='dispatch')
+class TermUpdateView(SchoolRoleMixin, UpdateView):
+    model = Term
+    form_class = TermForm
+    template_name = 'results/term_form.html'
+    success_url = reverse_lazy('results:term_list')
+    required_roles = ['headmaster', 'admin']
+
+    def get_queryset(self):
+        return Term.objects.filter(
+            academic_year__school=get_default_school()
+        ).select_related('academic_year')
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if hasattr(form, 'fields') and 'academic_year' in form.fields:
+            form.fields['academic_year'].queryset = AcademicYear.objects.filter(school=get_default_school())
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Term updated successfully!')
+        return super().form_valid(form)
+
+
+@method_decorator(login_required, name='dispatch')
+class TermDeleteView(SchoolRoleMixin, DeleteView):
+    model = Term
+    template_name = 'results/term_confirm_delete.html'
+    success_url = reverse_lazy('results:term_list')
+    required_roles = ['headmaster', 'admin']
+
+    def get_queryset(self):
+        return Term.objects.filter(
+            academic_year__school=get_default_school()
+        )
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Term deleted successfully!')
+        return super().delete(request, *args, **kwargs)
 
 
 @method_decorator(login_required, name='dispatch')
@@ -59,7 +102,7 @@ class GradeScaleListView(ListView):
     context_object_name = 'grade_scales'
 
     def get_queryset(self):
-        return GradeScale.objects.filter(school=self.request.school)
+        return GradeScale.objects.filter(school=get_default_school())
 
 
 @method_decorator(login_required, name='dispatch')
@@ -70,7 +113,7 @@ class GradeScaleCreateView(CreateView):
     success_url = reverse_lazy('results:grade_scale_list')
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Grade scale added successfully!')
         return super().form_valid(form)
 
@@ -83,7 +126,7 @@ class GradeScaleUpdateView(UpdateView):
     success_url = reverse_lazy('results:grade_scale_list')
 
     def get_queryset(self):
-        return GradeScale.objects.filter(school=self.request.school)
+        return GradeScale.objects.filter(school=get_default_school())
 
     def form_valid(self, form):
         messages.success(self.request, 'Grade scale updated successfully!')
@@ -97,7 +140,7 @@ class GradeScaleDeleteView(DeleteView):
     success_url = reverse_lazy('results:grade_scale_list')
 
     def get_queryset(self):
-        return GradeScale.objects.filter(school=self.request.school)
+        return GradeScale.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, 'Grade scale deleted successfully!')
@@ -111,7 +154,7 @@ class AssessmentComponentListView(ListView):
     context_object_name = 'components'
 
     def get_queryset(self):
-        return AssessmentComponent.objects.filter(school=self.request.school).select_related('subject')
+        return AssessmentComponent.objects.filter(school=get_default_school()).select_related('subject')
 
 
 @method_decorator(login_required, name='dispatch')
@@ -123,11 +166,11 @@ class AssessmentComponentCreateView(CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
-        form.instance.school = self.request.school
+        form.instance.school = get_default_school()
         messages.success(self.request, 'Assessment component added successfully!')
         return super().form_valid(form)
 
@@ -140,11 +183,11 @@ class AssessmentComponentUpdateView(UpdateView):
     success_url = reverse_lazy('results:assessment_component_list')
 
     def get_queryset(self):
-        return AssessmentComponent.objects.filter(school=self.request.school)
+        return AssessmentComponent.objects.filter(school=get_default_school())
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['school'] = self.request.school
+        kwargs['school'] = get_default_school()
         return kwargs
 
     def form_valid(self, form):
@@ -159,7 +202,7 @@ class AssessmentComponentDeleteView(DeleteView):
     success_url = reverse_lazy('results:assessment_component_list')
 
     def get_queryset(self):
-        return AssessmentComponent.objects.filter(school=self.request.school)
+        return AssessmentComponent.objects.filter(school=get_default_school())
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, 'Assessment component deleted successfully!')
@@ -172,7 +215,7 @@ class ResultEntryView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        school = self.request.school
+        school = get_default_school()
 
         class_section_id = self.request.GET.get('class')
         subject_id = self.request.GET.get('subject')
@@ -225,7 +268,7 @@ class ResultEntryView(TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
-        school = request.school
+        school = get_default_school()
         school_user = request.user.school_memberships.filter(school=school).first()
 
         class_id = request.POST.get('class')
@@ -301,7 +344,7 @@ class PendingApprovalsView(ListView):
 
     def get_queryset(self):
         return StudentResult.objects.filter(
-            class_section__school=self.request.school,
+            class_section__school=get_default_school(),
             status='submitted'
         ).select_related('student__user', 'subject', 'term')
 
@@ -311,11 +354,11 @@ class PendingApprovalsView(ListView):
 
         results = StudentResult.objects.filter(
             id__in=result_ids,
-            class_section__school=request.school
+            class_section__school=get_default_school()
         )
 
         if action == 'approve':
-            results.update(status='approved', approved_by=request.user.school_memberships.filter(school=request.school).first())
+            results.update(status='approved', approved_by=request.user.school_memberships.filter(school=get_default_school()).first())
             messages.success(request, f'{results.count()} results approved!')
         elif action == 'lock':
             results.update(status='locked')
@@ -331,7 +374,7 @@ class StudentResultsView(DetailView):
     context_object_name = 'student'
 
     def get_queryset(self):
-        return Student.objects.filter(school=self.request.school)
+        return Student.objects.filter(school=get_default_school())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -342,7 +385,7 @@ class StudentResultsView(DetailView):
         ).select_related('term', 'term__academic_year').order_by('term__academic_year', 'term__term_number')
 
         current_term = Term.objects.filter(
-            academic_year__school=self.request.school,
+            academic_year__school=get_default_school(),
             is_current=True
         ).first()
 
@@ -362,7 +405,7 @@ class StudentResultsView(DetailView):
 def approve_all_results(request):
     if request.method == 'POST':
         term_id = request.POST.get('term_id')
-        school = request.school
+        school = get_default_school()
         school_user = request.user.school_memberships.filter(school=school).first()
 
         qs = StudentResult.objects.filter(
@@ -379,13 +422,13 @@ def approve_all_results(request):
 
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(school_role_required(['headmaster', 'admin']), name='dispatch')
+@method_decorator(school_role_required(['headmaster', 'admin', 'secretary']), name='dispatch')
 class StudentProceedView(TemplateView):
     template_name = 'results/student_proceed.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        school = self.request.school
+        school = get_default_school()
 
         from academics.models import ClassSection, AcademicYear
 
@@ -405,7 +448,7 @@ class StudentProceedView(TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
-        school = request.school
+        school = get_default_school()
         student_ids = request.POST.getlist('student_ids')
         target_class_id = request.POST.get('target_class')
         action = request.POST.get('action')
