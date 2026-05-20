@@ -431,20 +431,32 @@
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:home' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-graph-up-arrow text-primary"></i>
+                <span>Finance Dashboard</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <a href="{% url 'fees:structure_list' %}" class="action-btn text-decoration-none">
+                <i class="bi bi-currency-dollar text-warning"></i>
+                <span>Fee Structures</span>
+              </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
               <a href="{% url 'fees:create_invoice' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-receipt text-warning"></i>
+                <i class="bi bi-receipt text-info"></i>
                 <span>Create Invoice</span>
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
               <a href="{% url 'fees:bulk_invoice' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-stack text-info"></i>
+                <i class="bi bi-stack text-success"></i>
                 <span>Bulk Invoices</span>
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
               <a href="{% url 'fees:invoice_list' %}" class="action-btn text-decoration-none">
-                <i class="bi bi-cash-coin text-success"></i>
+                <i class="bi bi-cash-coin text-primary"></i>
                 <span>Record Payment</span>
               </a>
             </div>
