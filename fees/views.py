@@ -211,6 +211,33 @@ def fee_structure_list(request):
 
 
 @login_required
+@require_role(['admin', 'headmaster', 'secretary'])
+def fee_structure_edit(request, pk):
+    school = get_default_school()
+    structure = get_object_or_404(FeeStructure, pk=pk, school=school)
+    if request.method == 'POST':
+        form = FeeStructureForm(school=school, data=request.POST, instance=structure)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Fee structure updated.')
+            return redirect('fees:structure_list')
+    else:
+        form = FeeStructureForm(school=school, instance=structure)
+    return render(request, 'fees/fee_structure_form.html', {'form': form, 'title': 'Edit Fee Structure', 'structure': structure})
+
+
+@login_required
+@require_role(['admin', 'headmaster'])
+def fee_structure_delete(request, pk):
+    school = get_default_school()
+    structure = get_object_or_404(FeeStructure, pk=pk, school=school)
+    if request.method == 'POST':
+        structure.delete()
+        messages.success(request, 'Fee structure deleted.')
+    return redirect('fees:structure_list')
+
+
+@login_required
 def invoice_list(request):
     school = get_default_school()
     school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
