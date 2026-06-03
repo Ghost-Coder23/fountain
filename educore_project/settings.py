@@ -21,6 +21,7 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['*'] if DEBUG else [
     'fountain.curated.co.zw',
     'localhost',
+    "FountainTest.pythonanywhere.com",
     '127.0.0.1',
 ]
 
@@ -29,6 +30,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",
     "https://fountain.curated.co.zw"
+    "https://FountainTest.pythonanywhere.com",
+    "https://www.FountainTest.pythonanywhere.com",
 ]
 
 # CSRF and Session cookie settings

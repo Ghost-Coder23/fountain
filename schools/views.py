@@ -25,7 +25,8 @@ import os
 @ensure_csrf_cookie
 def csrf_refresh(request):
     from django.http import JsonResponse
-    return JsonResponse({'status': 'ok'})
+    from django.middleware.csrf import get_token
+    return JsonResponse({'csrf_token': get_token(request)})
 
 @require_GET
 def service_worker(request):

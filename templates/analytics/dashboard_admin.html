@@ -548,7 +548,7 @@
                 <div class="flex-grow-1">
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <h6 class="mb-0 small fw-bold">{{ activity.title }}</h6>
-                    <small class="text-muted" style="font-size: 0.7rem;">{{ activity.time|timesince }} ago</small>
+                    <small class="text-muted" style="font-size: 0.7rem;" title="{{ activity.time|date:'F j, Y, g:i a' }}">{{ activity.time|date:'F j, Y, g:i a' }}</small>
                   </div>
                   <p class="text-muted small mb-0">{{ activity.desc }}</p>
                 </div>
@@ -581,7 +581,7 @@
                 <div class="flex-grow-1">
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <h6 class="mb-0 small fw-bold">{{ activity.title }}</h6>
-                    <small class="text-muted" style="font-size: 0.7rem;">{{ activity.time|timesince }} ago</small>
+                    <small class="text-muted" style="font-size: 0.7rem;" title="{{ activity.time|date:'F j, Y, g:i a' }}">{{ activity.time|date:'F j, Y, g:i a' }}</small>
                   </div>
                   <p class="text-muted small mb-0">{{ activity.desc }}</p>
                 </div>

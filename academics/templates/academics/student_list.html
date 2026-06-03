@@ -26,9 +26,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="d-flex gap-2 align-items-center">
-        <form method="get" class="d-flex gap-2">
-            <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Search students..." style="width:220px;">
-            <select name="class" class="form-select form-select-sm" style="width:180px;">
+        <form id="student-search-form" method="get" class="d-flex gap-2">
+            <input type="text" name="search" id="student-search-input" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Search students..." style="width:220px;">
+            <select name="class" id="student-class-filter" class="form-select form-select-sm" style="width:180px;">
                 <option value="">All Classes</option>
                 {% for c in class_sections %}
                 <option value="{{ c.id }}" {% if request.GET.class == c.id|stringformat:'s' %}selected{% endif %}>{{ c }}</option>
@@ -70,7 +70,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="student-table-body">
                 {% for student in students %}
                 <tr>
                     <td>
@@ -122,4 +122,45 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const searchInput = document.getElementById('student-search-input');
+    const tableBody = document.getElementById('student-table-body');
+    let allStudents = [];
+
+    // Function to load students from IndexedDB if offline
+    async function loadOfflineData() {
+        if (window.EduCoreOffline && window.eduCoreDB) {
+            allStudents = await window.EduCoreOffline.getAll('students');
+            console.log('Loaded students from IndexedDB:', allStudents);
+        }
+    }
+
+    // Function to render filtered students
+    function renderFilteredStudents() {
+        const searchTerm = searchInput.value;
+        let filtered = allStudents;
+        if (searchTerm) {
+            filtered = window.EduCoreOffline.searchStudents(filtered, searchTerm);
+        }
+        window.EduCoreOffline.renderStudents(filtered, tableBody);
+    }
+
+    // Check if we're offline and handle accordingly
+    if (!navigator.onLine) {
+        await loadOfflineData();
+        // Replace form submission to use local search
+        const searchForm = document.getElementById('student-search-form');
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            renderFilteredStudents();
+        });
+        searchInput.addEventListener('input', () => {
+            renderFilteredStudents();
+        });
+        renderFilteredStudents();
+    }
+});
+</script>
 {% endblock %}

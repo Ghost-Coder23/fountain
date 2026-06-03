@@ -13,12 +13,12 @@
 </div>
 <div class="card mb-3">
   <div class="card-body py-2">
-    <form method="get" class="row g-2 align-items-end">
+    <form id="invoice-filter-form" method="get" class="row g-2 align-items-end">
       <div class="col-md-6">
-        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by name or invoice #" value="{{ search|default:'' }}">
+        <input type="text" name="search" id="invoice-search-input" class="form-control form-control-sm" placeholder="Search by name or invoice #" value="{{ search|default:'' }}">
       </div>
       <div class="col-md-4">
-        <select name="status" class="form-select form-select-sm">
+        <select name="status" id="invoice-status-filter" class="form-select form-select-sm">
           <option value="">All Statuses</option>
           <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
           <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
@@ -35,7 +35,7 @@
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead><tr><th>Invoice #</th><th>Student</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
-        <tbody>
+        <tbody id="invoice-table-body">
           {% for inv in invoices %}
           <tr>
             <td><code>{{ inv.invoice_number }}</code></td>
@@ -57,4 +57,78 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const searchInput = document.getElementById('invoice-search-input');
+    const statusFilter = document.getElementById('invoice-status-filter');
+    const tableBody = document.getElementById('invoice-table-body');
+    let allInvoices = [];
+
+    // Function to load invoices from IndexedDB if offline
+    async function loadOfflineData() {
+        if (window.EduCoreOffline && window.eduCoreDB) {
+            allInvoices = await window.EduCoreOffline.getAll('fee_invoices');
+            console.log('Loaded invoices from IndexedDB:', allInvoices);
+        }
+    }
+
+    // Function to render filtered invoices
+    function renderFilteredInvoices() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusVal = statusFilter.value;
+        let filtered = allInvoices;
+        
+        if (searchTerm) {
+            filtered = filtered.filter(inv => {
+                const studentName = (inv.student?.user?.get_full_name || '').toLowerCase();
+                const invoiceNum = (inv.invoice_number || '').toLowerCase();
+                return studentName.includes(searchTerm) || invoiceNum.includes(searchTerm);
+            });
+        }
+        
+        if (statusVal) {
+            filtered = filtered.filter(inv => inv.status === statusVal);
+        }
+
+        // Render the table
+        if (!filtered || filtered.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No invoices found.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = filtered.map(inv => {
+            const studentName = inv.student?.user?.get_full_name || 'Unknown';
+            const amountPaid = inv.amount_paid || 0;
+            const balance = inv.balance || inv.amount - amountPaid;
+            
+            return `
+                <tr>
+                    <td><code>${inv.invoice_number || ''}</code></td>
+                    <td>${studentName}</td>
+                    <td><span class="money-amount">${inv.currency || 'USD'} ${inv.amount || 0}</span></td>
+                    <td class="text-success"><span class="money-amount">${inv.currency || 'USD'} ${amountPaid}</span></td>
+                    <td class="${balance > 0 ? 'text-danger fw-semibold' : 'text-success'}"><span class="money-amount">${inv.currency || 'USD'} ${balance}</span></td>
+                    <td>${inv.due_date || '-'}</td>
+                    <td><span class="badge ${inv.status === 'paid' ? 'bg-success' : inv.status === 'partial' ? 'bg-warning text-dark' : 'bg-danger'}">${inv.status || 'unpaid'}</span></td>
+                    <td><span class="text-muted small">View (offline)</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Check if offline and handle accordingly
+    if (!navigator.onLine) {
+        await loadOfflineData();
+        const filterForm = document.getElementById('invoice-filter-form');
+        filterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            renderFilteredInvoices();
+        });
+        searchInput.addEventListener('input', renderFilteredInvoices);
+        statusFilter.addEventListener('change', renderFilteredInvoices);
+        renderFilteredInvoices();
+    }
+});
+</script>
 {% endblock %}

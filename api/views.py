@@ -17,6 +17,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
+from django.middleware.csrf import get_token
 
 from schools.models import School, SchoolUser
 from academics.models import AcademicYear, ClassLevel, Subject, ClassSection, Student
@@ -78,6 +79,15 @@ class InitialSyncView(APIView):
         ).data
 
         return Response(data)
+
+
+class CsrfRefreshView(APIView):
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        csrf_token = get_token(request)
+        return Response({"csrf_token": csrf_token})
 
 
 class BatchSyncView(APIView):
