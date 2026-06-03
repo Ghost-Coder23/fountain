@@ -12,7 +12,7 @@
  *  7. api-cache: kept separate but eviction is now handled (old api- caches cleaned on activate)
  */
 
-const CACHE_NAME = 'educore-static-v28';
+const CACHE_NAME = 'educore-static-v29';
 
 const ALLOWED_CDN_HOSTS = [
     'cdn.jsdelivr.net',
@@ -35,9 +35,11 @@ const STATIC_ASSETS = [
     '/static/css/style.css',
     '/static/js/db.js',
     '/static/js/sync.js',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
+    '/static/bootstrap/css/bootstrap.min.css',
+    '/static/bootstrap/js/bootstrap.bundle.min.js',
+    '/static/bootstrap-icons/bootstrap-icons-1.11.0/font/bootstrap-icons.css',
+    '/static/bootstrap-icons/bootstrap-icons-1.11.0/font/fonts/bootstrap-icons.woff',
+    '/static/bootstrap-icons/bootstrap-icons-1.11.0/font/fonts/bootstrap-icons.woff2',
     'https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css',
     'https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js',
     'https://unpkg.com/htmx.org@1.9.10'

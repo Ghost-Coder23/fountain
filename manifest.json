@@ -1,6 +1,6 @@
 {
-  "name": "AcademiaLink - Smart School Management",
-  "short_name": "AcademiaLink",
+  "name": "Fountain - Smart School Management",
+  "short_name": "Fountain",
   "description": "Comprehensive School Management for Offline/Online usage.",
   "start_url": "/",
   "display": "standalone",
@@ -13,7 +13,7 @@
       "type": "image/png"
     },
     {
-      "src": "/static/icons/icon-512.png",
+      "src": "/static/icons/fountain.jpg",
       "sizes": "512x512",
       "type": "image/png"
     }

@@ -1,5 +1,5 @@
 
-# EduCore Project Summary
+# Fountain Project Summary
 
 ## Project Structure Created:
 
