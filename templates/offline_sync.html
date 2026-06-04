@@ -44,27 +44,22 @@
     }
 
     async function requestSync() {
-      setStatus('Requesting sync…');
+      setStatus('Syncing…');
 
       try {
-        // If the existing app uses an offline queue (e.g. via service worker / IndexedDB),
-        // this endpoint can be handled server-side OR by client-side code.
-        const res = await fetch('/offline/sync/', { method: 'POST' });
-        if (!res.ok) throw new Error('Sync request failed');
-        setStatus('Sync requested. You may refresh to see updates.');
+        // Use our existing sync manager to flush the queue
+        if (window.syncManager) {
+          await window.syncManager.flushQueue();
+          setStatus('Sync complete!');
+        } else {
+          setStatus('Sync manager not available');
+        }
       } catch (e) {
-        // Fallback: still update UI so user gets feedback.
-        setStatus('Could not sync now (offline). Will retry when online.');
+        setStatus('Could not sync now. Will retry when online.');
       }
     }
 
     if (btn) btn.addEventListener('click', requestSync);
-
-    // Attempt auto sync when coming online.
-    window.addEventListener('online', () => {
-      setStatus('Back online. Syncing…');
-      requestSync();
-    });
 
     setStatus(navigator.onLine ? 'Online' : 'Offline');
   })();

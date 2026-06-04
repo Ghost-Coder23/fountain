@@ -16,14 +16,22 @@
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
-            <thead class="table-light"><tr><th class="ps-4">Name</th><th>Class Level</th><th>Amount</th><th>Term/Year</th><th class="pe-4 text-end">Mandatory</th><th class="pe-4 text-end">Actions</th></tr></thead>
+            <thead class="table-light"><tr><th class="ps-4">Name</th><th>Class Level</th><th>Amount</th><th>Billing Cycle</th><th>Term/Month</th><th>Year</th><th class="pe-4 text-end">Mandatory</th><th class="pe-4 text-end">Actions</th></tr></thead>
             <tbody>
               {% for s in structures %}
               <tr>
                 <td class="ps-4 fw-bold text-primary">{{ s.name }}</td>
                 <td><span class="badge bg-light text-dark">{{ s.class_level|default:"All Classes" }}</span></td>
                 <td><strong>{{ s.currency }} {{ s.amount }}</strong></td>
-                <td><small class="text-muted">{{ s.term|default:"Yearly" }} / {{ s.academic_year }}</small></td>
+                <td><span class="badge bg-primary-subtle text-primary">{{ s.get_billing_cycle_display }}</span></td>
+                <td><small class="text-muted">
+                    {% if s.billing_cycle == 'monthly' %}
+                        {{ s.get_month_display|default:"All Months" }}
+                    {% else %}
+                        {{ s.term|default:"Yearly" }}
+                    {% endif %}
+                </small></td>
+                <td><small class="text-muted">{{ s.academic_year }}</small></td>
                 <td class="pe-4 text-end">
                   {% if s.is_mandatory %}<span class="badge bg-success-subtle text-success rounded-pill">Yes</span>{% else %}<span class="badge bg-secondary-subtle text-secondary rounded-pill">No</span>{% endif %}
                 </td>
@@ -35,7 +43,7 @@
                   </form>
                 </td>
               </tr>
-              {% empty %}<tr><td colspan="6" class="text-center text-muted py-5">No fee structures defined yet.</td></tr>
+              {% empty %}<tr><td colspan="8" class="text-center text-muted py-5">No fee structures defined yet.</td></tr>
               {% endfor %}
             </tbody>
           </table>

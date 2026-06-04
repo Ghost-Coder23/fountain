@@ -11,7 +11,7 @@ from results.models import Term
 class FeeStructureForm(forms.ModelForm):
     class Meta:
         model = FeeStructure
-        fields = ['name', 'class_level', 'academic_year', 'term', 'amount', 'currency', 'is_mandatory', 'due_date', 'description']
+        fields = ['name', 'class_level', 'academic_year', 'billing_cycle', 'term', 'month', 'amount', 'currency', 'is_mandatory', 'due_date', 'description']
         widgets = {
             'due_date': forms.DateInput(attrs={'type': 'date'}),
             'description': forms.Textarea(attrs={'rows': 2}),
@@ -21,10 +21,14 @@ class FeeStructureForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if school:
             self.fields['class_level'].queryset = ClassLevel.objects.filter(school=school)
+            self.fields['class_level'].empty_label = "All Classes"
             self.fields['academic_year'].queryset = AcademicYear.objects.filter(school=school)
             self.fields['term'].queryset = Term.objects.filter(academic_year__school=school)
+            self.fields['term'].empty_label = "All Terms"
+            self.fields['month'].empty_label = "All Months"
             self.fields['class_level'].required = False
             self.fields['term'].required = False
+            self.fields['month'].required = False
 
 
 class FeeInvoiceForm(forms.ModelForm):
@@ -51,6 +55,9 @@ class FeePaymentForm(forms.ModelForm):
     class Meta:
         model = FeePayment
         fields = ['amount', 'currency', 'method', 'reference', 'payment_date', 'notes']
+        labels = {
+            'reference': 'Receipt Number'
+        }
         widgets = {
             'payment_date': forms.DateInput(attrs={'type': 'date'}),
             'notes': forms.Textarea(attrs={'rows': 2}),
@@ -109,7 +116,7 @@ class QuickPaymentForm(forms.Form):
     amount = forms.DecimalField(max_digits=12, decimal_places=2)
     currency = forms.ChoiceField(choices=FeeStructure.CURRENCY_CHOICES)
     method = forms.ChoiceField(choices=FeePayment.METHOD_CHOICES)
-    reference = forms.CharField(max_length=100, required=False)
+    reference = forms.CharField(max_length=100, required=False, label="Receipt Number")
     payment_date = forms.DateField(initial=timezone.now, widget=forms.DateInput(attrs={'type': 'date'}))
     notes = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 2}))
 

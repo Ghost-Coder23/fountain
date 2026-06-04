@@ -247,23 +247,39 @@ class StudentCreateView(CreateView):
         from django.contrib.auth.models import User
         
         email = form.cleaned_data['email']
-        user = User.objects.filter(email=email).first()
+        first_name = form.cleaned_data['first_name']
+        last_name = form.cleaned_data['last_name']
+        
+        user = None
         is_new_user = False
+        password = None
 
-        if user:
-            if SchoolUser.objects.filter(user=user, school=get_default_school()).exists():
-                messages.warning(self.request, f"User {email} is already a member of this school.")
-                return redirect('academics:student_list')
-        else:
+        if email:
+            user = User.objects.filter(email=email).first()
+            if user:
+                if SchoolUser.objects.filter(user=user, school=get_default_school()).exists():
+                    messages.warning(self.request, f"User {email} is already a member of this school.")
+                    return redirect('academics:student_list')
+        
+        if not user:
             is_new_user = True
             password_chars = string.ascii_letters + string.digits
             password = ''.join(random.choice(password_chars) for _ in range(12))
+            
+            # Generate username
+            base_username = f"{first_name.lower()}.{last_name.lower()}".replace(' ', '.')
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            
             user = User.objects.create_user(
-                username=email,
-                email=email,
+                username=username,
+                email=email or '',
                 password=password,
-                first_name=form.cleaned_data['first_name'],
-                last_name=form.cleaned_data['last_name']
+                first_name=first_name,
+                last_name=last_name
             )
 
         # Create SchoolUser link
@@ -274,8 +290,9 @@ class StudentCreateView(CreateView):
             is_active=True
         )
 
-        # Send welcome email
-        send_welcome_email(self.request, user, get_default_school(), is_new_user=is_new_user)
+        # Send welcome email only if email is provided
+        if email:
+            send_welcome_email(self.request, user, get_default_school(), is_new_user=is_new_user)
 
         # Generate admission number: YYYY###
         current_year = datetime.now().year
@@ -296,11 +313,11 @@ class StudentCreateView(CreateView):
 
         messages.success(self.request, f'Student {user.get_full_name()} created successfully! Admission Number: {admission_number}')
         
-        # If it's a new user, store the temporary password in session to show once
-        if is_new_user:
+        # If it's a new user and password exists, store the temporary password in session
+        if is_new_user and password:
             self.request.session['last_student_password'] = {
                 'name': user.get_full_name(),
-                'email': user.email,
+                'email': user.email or 'No email provided',
                 'password': password
             }
             
@@ -497,8 +514,22 @@ class StudentUpdateView(UpdateView):
 
     def get_queryset(self):
         return Student.objects.filter(school=get_default_school())
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['first_name'] = self.object.user.first_name
+        initial['last_name'] = self.object.user.last_name
+        initial['email'] = self.object.user.email
+        return initial
 
     def form_valid(self, form):
+        # Update user's first name, last name, and email
+        user = self.object.user
+        user.first_name = form.cleaned_data['first_name']
+        user.last_name = form.cleaned_data['last_name']
+        if form.cleaned_data['email']:
+            user.email = form.cleaned_data['email']
+        user.save()
         messages.success(self.request, 'Student updated successfully!')
         return super().form_valid(form)
 

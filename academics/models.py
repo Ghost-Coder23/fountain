@@ -102,7 +102,7 @@ class Student(SyncBaseModel):
     school_user = models.OneToOneField(SchoolUser, on_delete=models.CASCADE, related_name='student_details')
 
     admission_number = models.CharField(max_length=50, unique=True, db_index=True)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     address = models.TextField()
     phone = models.CharField(max_length=20, blank=True)
@@ -116,9 +116,9 @@ class Student(SyncBaseModel):
         related_name='students'
     )
 
-    parent_name = models.CharField(max_length=200)
-    parent_phone = models.CharField(max_length=20)
-    parent_email = models.EmailField()
+    parent_name = models.CharField(max_length=200, blank=True)
+    parent_phone = models.CharField(max_length=20, blank=True)
+    parent_email = models.EmailField(blank=True)
 
     date_joined = models.DateField(auto_now_add=True)
     is_active = models.BooleanField(default=True)

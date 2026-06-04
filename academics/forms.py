@@ -47,7 +47,7 @@ class ClassSectionForm(forms.ModelForm):
 class StudentForm(forms.ModelForm):
     first_name = forms.CharField(max_length=100)
     last_name = forms.CharField(max_length=100)
-    email = forms.EmailField()
+    email = forms.EmailField(required=False, label='Email (Optional)')
 
     class Meta:
         model = Student
@@ -55,6 +55,12 @@ class StudentForm(forms.ModelForm):
             'date_of_birth', 'gender', 'address', 'phone',
             'current_class', 'parent_name', 'parent_phone', 'parent_email', 'photo'
         ]
+        labels = {
+            'parent_name': 'Parent/Guardian Name (Optional)',
+            'parent_phone': 'Parent/Guardian Phone (Optional)',
+            'parent_email': 'Parent/Guardian Email (Optional)',
+            'date_of_birth': 'Date of Birth (Optional)'
+        }
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
             'address': forms.Textarea(attrs={'rows': 3}),
@@ -62,6 +68,11 @@ class StudentForm(forms.ModelForm):
 
     def __init__(self, school=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Make parent/guardian fields optional
+        self.fields['parent_name'].required = False
+        self.fields['parent_phone'].required = False
+        self.fields['parent_email'].required = False
+        self.fields['date_of_birth'].required = False
         if school:
             self.fields['current_class'].queryset = ClassSection.objects.filter(school=school)
 

@@ -10,14 +10,26 @@ from core.models import TenantManager
 
 
 class FeeStructure(models.Model):
-    """Define what fees are charged for a class level in a term"""
+    """Define what fees are charged for a class level in a term or month"""
     CURRENCY_CHOICES = [('USD', 'USD'), ('ZWL', 'ZWL')]
+    BILLING_CYCLE_CHOICES = [
+        ('termly', 'Termly'),
+        ('monthly', 'Monthly'),
+    ]
+    MONTH_CHOICES = [
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December'),
+    ]
 
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='fee_structures')
     name = models.CharField(max_length=100)  # e.g. "Tuition Fee", "Dev Levy"
     class_level = models.ForeignKey(ClassLevel, on_delete=models.SET_NULL, null=True, blank=True)
     academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='fee_structures')
+    billing_cycle = models.CharField(max_length=10, choices=BILLING_CYCLE_CHOICES, default='termly')
     term = models.ForeignKey(Term, on_delete=models.SET_NULL, null=True, blank=True)
+    month = models.IntegerField(choices=MONTH_CHOICES, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
     is_mandatory = models.BooleanField(default=True)

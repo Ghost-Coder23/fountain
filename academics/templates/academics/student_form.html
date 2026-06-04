@@ -1,31 +1,30 @@
 {% extends 'base_dashboard.html' %}
-{% block title %}Add Student{% endblock %}
-{% block page_title %}Add Student{% endblock %}
+{% block title %}{{ form.instance.pk|yesno:'Edit Student,Add Student' }}{% endblock %}
+{% block page_title %}{{ form.instance.pk|yesno:'Edit Student,Add Student' }}{% endblock %}
 {% block content %}
 <div class="row justify-content-center"><div class="col-md-8">
 <div class="card"><div class="card-header">Student Information</div><div class="card-body">
 <form method="post" enctype="multipart/form-data">
 {% csrf_token %}
 <div class="row g-3">
-<div class="col-md-4"><label class="form-label">First Name *</label><input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" required>{% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Last Name *</label><input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" required>{% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Email *</label><input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control {% if form.email.errors %}is-invalid{% endif %}" required>{% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Date of Birth *</label><input type="date" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}" class="form-control {% if form.date_of_birth.errors %}is-invalid{% endif %}" required>{% for e in form.date_of_birth.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Gender *</label><select name="gender" class="form-select {% if form.gender.errors %}is-invalid{% endif %}" required><option value="">Select</option><option value="M">Male</option><option value="F">Female</option><option value="O">Other</option></select>{% for e in form.gender.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-6"><label class="form-label">Class</label><select name="current_class" class="form-select">
-<option value="">-- Select Class --</option>
-{% for cs in form.current_class.field.queryset %}<option value="{{ cs.id }}" {% if form.current_class.value == cs.id|stringformat:'s' %}selected{% endif %}>{{ cs }}</option>{% endfor %}
-</select></div>
-<div class="col-md-6"><label class="form-label">Phone</label><input type="text" name="phone" value="{{ form.phone.value|default:'' }}" class="form-control"></div>
-<div class="col-12"><label class="form-label">Address *</label><textarea name="address" class="form-control {% if form.address.errors %}is-invalid{% endif %}" rows="2" required>{{ form.address.value|default:'' }}</textarea>{% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<hr><h6 class="col-12 fw-bold text-primary mb-0">Parent/Guardian Information</h6>
-<div class="col-md-4"><label class="form-label">Parent Name *</label><input type="text" name="parent_name" value="{{ form.parent_name.value|default:'' }}" class="form-control {% if form.parent_name.errors %}is-invalid{% endif %}" required>{% for e in form.parent_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Parent Phone *</label><input type="text" name="parent_phone" value="{{ form.parent_phone.value|default:'' }}" class="form-control {% if form.parent_phone.errors %}is-invalid{% endif %}" required>{% for e in form.parent_phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-md-4"><label class="form-label">Parent Email *</label><input type="email" name="parent_email" value="{{ form.parent_email.value|default:'' }}" class="form-control {% if form.parent_email.errors %}is-invalid{% endif %}" required>{% for e in form.parent_email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
-<div class="col-12"><label class="form-label">Photo</label><input type="file" name="photo" class="form-control" accept="image/*"></div>
-</div>
+        <div class="col-md-4"><label class="form-label">First Name *</label><input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" required>{% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-4"><label class="form-label">Last Name *</label><input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" required>{% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-4"><label class="form-label">Email (Optional)</label><input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control {% if form.email.errors %}is-invalid{% endif %}">{% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-4"><label class="form-label">Date of Birth (Optional)</label><input type="date" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}" class="form-control {% if form.date_of_birth.errors %}is-invalid{% endif %}">{% for e in form.date_of_birth.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-4"><label class="form-label">Gender *</label><select name="gender" class="form-select {% if form.gender.errors %}is-invalid{% endif %}" required><option value="">Select</option><option value="M">Male</option><option value="F">Female</option><option value="O">Other</option></select>{% for e in form.gender.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-6"><label class="form-label">Class</label><select name="current_class" class="form-select">
+        <option value="">-- Select Class --</option>
+        {% for cs in form.current_class.field.queryset %}<option value="{{ cs.id }}" {% if form.current_class.value == cs.id|stringformat:'s' %}selected{% endif %}>{{ cs }}</option>{% endfor %}
+        </select></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input type="text" name="phone" value="{{ form.phone.value|default:'' }}" class="form-control"></div>
+        <div class="col-12"><label class="form-label">Address *</label><textarea name="address" class="form-control {% if form.address.errors %}is-invalid{% endif %}" rows="2" required>{{ form.address.value|default:'' }}</textarea>{% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <hr><h6 class="col-12 fw-bold text-primary mb-0">Parent/Guardian Information</h6>
+        <div class="col-md-6"><label class="form-label">Parent Name (Optional)</label><input type="text" name="parent_name" value="{{ form.parent_name.value|default:'' }}" class="form-control {% if form.parent_name.errors %}is-invalid{% endif %}">{% for e in form.parent_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-md-6"><label class="form-label">Parent Email (Optional)</label><input type="email" name="parent_email" value="{{ form.parent_email.value|default:'' }}" class="form-control {% if form.parent_email.errors %}is-invalid{% endif %}">{% for e in form.parent_email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}</div>
+        <div class="col-12"><label class="form-label">Photo</label><input type="file" name="photo" class="form-control" accept="image/*"></div>
+        </div>
 {% if form.non_field_errors %}<div class="alert alert-danger mt-3">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
-<div class="mt-4"><button type="submit" class="btn btn-primary">Add Student</button><a href="{% url 'academics:student_list' %}" class="btn btn-secondary ms-2">Cancel</a></div>
+<div class="mt-4"><button type="submit" class="btn btn-primary">{{ form.instance.pk|yesno:'Update Student,Add Student' }}</button><a href="{% url 'academics:student_list' %}" class="btn btn-secondary ms-2">Cancel</a></div>
 </form>
 </div></div>
 </div></div>
