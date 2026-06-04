@@ -332,6 +332,13 @@ class StudentDetailView(DetailView):
 
     def get_queryset(self):
         return Student.objects.filter(school=get_default_school())
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add student invoices and payments
+        from fees.models import FeeInvoice
+        context['invoices'] = FeeInvoice.objects.filter(student=self.object).select_related('fee_structure').prefetch_related('payments').order_by('-issued_date')
+        return context
 
 
 # Teacher Views

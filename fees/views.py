@@ -324,6 +324,38 @@ def record_payment(request, invoice_pk):
 
 
 @login_required
+def edit_payment(request, payment_pk):
+    school = get_default_school()
+    school_user = SchoolUser.objects.filter(user=request.user, school=school).first()
+    payment = get_object_or_404(FeePayment, pk=payment_pk, invoice__school=school)
+    if request.method == 'POST':
+        form = FeePaymentForm(data=request.POST, instance=payment)
+        if form.is_valid():
+            payment = form.save()
+            payment.received_by = school_user
+            payment.save()
+            payment.invoice.update_balance()
+            messages.success(request, 'Payment updated successfully!')
+            return redirect('fees:invoice_detail', pk=payment.invoice.pk)
+    else:
+        # Pre-fill form with existing payment data
+        initial_data = {
+            'amount': payment.amount,
+            'currency': payment.currency,
+            'method': payment.method,
+            'reference': payment.reference,
+            'payment_date': payment.payment_date.date() if payment.payment_date else None,
+            'notes': payment.notes,
+        }
+        form = FeePaymentForm(initial=initial_data, instance=payment)
+    return render(request, 'fees/payment_form.html', {
+        'form': form,
+        'payment': payment,
+        'title': 'Edit Payment',
+    })
+
+
+@login_required
 def student_fee_statement(request, student_id):
     school = get_default_school()
     student = get_object_or_404(Student, id=student_id, school=school)
@@ -367,7 +399,31 @@ def bulk_invoice(request):
 
         created = 0
         for student in students:
-            if not FeeInvoice.objects.filter(student=student, fee_structure=structure).exists():
+            # For monthly structures, check if invoice exists for this month
+            # For termly structures, check term
+            # For general, check if any invoice exists for structure
+            invoice_exists = False
+            if structure.billing_cycle == 'monthly' and structure.month:
+                # Check if there's an invoice for this structure and month in the current academic year
+                invoice_exists = FeeInvoice.objects.filter(
+                    student=student,
+                    fee_structure=structure,
+                    issued_date__month=structure.month,
+                    issued_date__year=structure.academic_year.start_date.year,
+                ).exists()
+            elif structure.billing_cycle == 'termly' and structure.term:
+                # Check if there's an invoice for this structure and term
+                invoice_exists = FeeInvoice.objects.filter(
+                    student=student,
+                    fee_structure=structure,
+                    # Since we don't have term on invoice, we'll just check term through structure
+                    # but to avoid duplicates, we can check if there's an invoice created recently
+                ).exists()
+            else:
+                # For general structures, check if any invoice exists
+                invoice_exists = FeeInvoice.objects.filter(student=student, fee_structure=structure).exists()
+
+            if not invoice_exists:
                 FeeInvoice.objects.create(
                     school=school,
                     student=student,

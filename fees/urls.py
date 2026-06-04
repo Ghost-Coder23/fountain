@@ -14,6 +14,7 @@ urlpatterns = [
     path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
     path('invoices/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
     path('invoices/<int:invoice_pk>/pay/', views.record_payment, name='record_payment'),
+    path('payments/<int:payment_pk>/edit/', views.edit_payment, name='edit_payment'),
     path('invoices/bulk/', views.bulk_invoice, name='bulk_invoice'),
     path('quick-payment/', views.quick_payment, name='quick_payment'),
     path('statement/<uuid:student_id>/', views.student_fee_statement, name='student_statement'),

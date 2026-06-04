@@ -76,5 +76,44 @@
 <i class="bi bi-clipboard-data me-1"></i>View Results
 </a>
 <a href="{% url 'academics:student_list' %}" class="btn btn-outline-secondary ms-2">Back to List</a>
+
+<div class="card mt-3">
+  <div class="card-header">Fee Invoices</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>Fee Structure</th>
+            <th>Amount</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td><code>{{ inv.invoice_number }}</code></td>
+            <td>{{ inv.fee_structure.name|default:"General Invoice" }}</td>
+            <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
+            <td class="text-success"><span class="money-amount">{{ inv.currency }} {{ inv.amount_paid }}</span></td>
+            <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}"><span class="money-amount">{{ inv.currency }} {{ inv.balance }}</span></td>
+            <td>{{ inv.due_date|default:"-" }}</td>
+            <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
+            <td>
+              <a href="{% url 'fees:invoice_detail' inv.pk %}" class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:2px 7px;">View</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center text-muted py-4">No invoices for this student yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}
