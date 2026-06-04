@@ -207,6 +207,18 @@ def headmaster_admin_dashboard(request, school, membership):
     # Recent Activity Stream
     activity_feed = []
     
+    # Helper to ensure everything is a datetime for sorting and template display
+    from datetime import datetime, time
+    import pytz
+    tz = pytz.timezone('Africa/Harare')
+
+    def ensure_datetime(val):
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, date):
+            return tz.localize(datetime.combine(val, time.min))
+        return val
+    
     # New Student Admissions
     new_students = Student.objects.filter(school=school).order_by('-date_joined')[:5]
     for s in new_students:
@@ -214,7 +226,7 @@ def headmaster_admin_dashboard(request, school, membership):
             'type': 'admission',
             'title': 'New Student Admission',
             'desc': f'{s.user.get_full_name()} joined {s.current_class or "school"}',
-            'time': s.date_joined,
+            'time': ensure_datetime(s.date_joined),
             'icon': 'bi-person-plus',
             'color': 'primary'
         })
@@ -225,7 +237,7 @@ def headmaster_admin_dashboard(request, school, membership):
             'type': 'payment',
             'title': 'Fee Payment Received',
             'desc': f'{p.currency} {p.amount} from {p.invoice.student.user.get_full_name()}',
-            'time': p.payment_date,
+            'time': ensure_datetime(p.payment_date),
             'icon': 'bi-cash-coin',
             'color': 'success'
         })
@@ -239,25 +251,13 @@ def headmaster_admin_dashboard(request, school, membership):
             'type': 'result',
             'title': 'Result Recorded',
             'desc': f'{r.subject.name} score for {r.student.user.get_full_name()}',
-            'time': r.updated_at,
+            'time': ensure_datetime(r.updated_at),
             'icon': 'bi-pencil-square',
             'color': 'info'
         })
         
-    # Helper to ensure everything is a datetime for sorting
-    from datetime import datetime, time
-    import pytz
-    tz = pytz.timezone('Africa/Harare')
-
-    def to_datetime(val):
-        if isinstance(val, datetime):
-            return val
-        if isinstance(val, date):
-            return tz.localize(datetime.combine(val, time.min))
-        return val
-
     # Sort activity feed by time
-    activity_feed.sort(key=lambda x: to_datetime(x['time']), reverse=True)
+    activity_feed.sort(key=lambda x: x['time'], reverse=True)
     activity_feed = activity_feed[:10]
 
     # Students per class
@@ -425,6 +425,18 @@ def secretary_dashboard(request, school, membership):
     # Recent Activity Stream
     activity_feed = []
     
+    # Helper to ensure everything is a datetime for sorting and template display
+    from datetime import datetime, time
+    import pytz
+    tz = pytz.timezone('Africa/Harare')
+
+    def ensure_datetime(val):
+        if isinstance(val, datetime):
+            return val
+        if isinstance(val, date):
+            return tz.localize(datetime.combine(val, time.min))
+        return val
+    
     # New Student Admissions
     new_students = Student.objects.filter(school=school).order_by('-date_joined')[:5]
     for s in new_students:
@@ -432,7 +444,7 @@ def secretary_dashboard(request, school, membership):
             'type': 'admission',
             'title': 'New Student Admission',
             'desc': f'{s.user.get_full_name()} joined {s.current_class or "school"}',
-            'time': s.date_joined,
+            'time': ensure_datetime(s.date_joined),
             'icon': 'bi-person-plus',
             'color': 'primary'
         })
@@ -443,7 +455,7 @@ def secretary_dashboard(request, school, membership):
             'type': 'payment',
             'title': 'Fee Payment Received',
             'desc': f'Payment from {p.invoice.student.user.get_full_name()}',
-            'time': p.payment_date,
+            'time': ensure_datetime(p.payment_date),
             'icon': 'bi-cash-coin',
             'color': 'success'
         })
@@ -457,25 +469,13 @@ def secretary_dashboard(request, school, membership):
             'type': 'result',
             'title': 'Result Recorded',
             'desc': f'{r.subject.name} score for {r.student.user.get_full_name()}',
-            'time': r.updated_at,
+            'time': ensure_datetime(r.updated_at),
             'icon': 'bi-pencil-square',
             'color': 'info'
         })
         
-    # Helper to ensure everything is a datetime for sorting
-    from datetime import datetime, time
-    import pytz
-    tz = pytz.timezone('Africa/Harare')
-
-    def to_datetime(val):
-        if isinstance(val, datetime):
-            return val
-        if isinstance(val, date):
-            return tz.localize(datetime.combine(val, time.min))
-        return val
-
     # Sort activity feed by time
-    activity_feed.sort(key=lambda x: to_datetime(x['time']), reverse=True)
+    activity_feed.sort(key=lambda x: x['time'], reverse=True)
     activity_feed = activity_feed[:10]
 
     # Students per class

@@ -7,13 +7,8 @@
 <div class="card">
 <div class="card-header">Branding & Settings</div>
 <div class="card-body">
-<form method="post" enctype="multipart/form-data">
+<form method="post">
 {% csrf_token %}
-<div class="mb-3">
-<label class="form-label fw-bold">School Logo</label>
-{% if object.logo %}<div class="mb-2"><img src="{{ object.logo.url }}" height="60" class="rounded"></div>{% endif %}
-<input type="file" name="logo" class="form-control" accept="image/*">
-</div>
 <div class="mb-3">
 <label class="form-label fw-bold">Theme Color</label>
 <input type="color" name="theme_color" value="{{ object.theme_color|default:'#4F46E5' }}" class="form-control form-control-color">

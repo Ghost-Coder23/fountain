@@ -57,7 +57,7 @@ class SchoolBrandingForm(forms.ModelForm):
     """Form for customizing school branding and settings"""
     class Meta:
         model = School
-        fields = ['logo', 'theme_color', 'motto', 'grading_system', 'ca_weight', 'exam_weight']
+        fields = ['theme_color', 'motto', 'grading_system', 'ca_weight', 'exam_weight']
         widgets = {
             'theme_color': forms.TextInput(attrs={'type': 'color'}),
             'ca_weight': forms.NumberInput(attrs={'min': 0, 'max': 100, 'step': 0.5}),
