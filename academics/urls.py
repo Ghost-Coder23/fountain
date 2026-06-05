@@ -36,4 +36,5 @@ urlpatterns = [
     path('assignments/<uuid:pk>/edit/', views.TeacherAssignmentUpdateView.as_view(), name='teacher_assignment_edit'),
     path('assignments/<uuid:pk>/delete/', views.TeacherAssignmentDeleteView.as_view(), name='teacher_assignment_delete'),
     path('students/export/<str:format>/', views.export_students, name='export_students'),
+    path('students/autocomplete/', views.student_autocomplete, name='student_autocomplete'),
 ]

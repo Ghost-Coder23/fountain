@@ -8,6 +8,9 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.utils.html import escape
 
 from core.utils import SchoolRoleMixin, send_welcome_email, export_to_excel, export_to_csv, get_default_school
 from .models import AcademicYear, ClassLevel, Subject, ClassSection, Student, TeacherSubjectAssignment
@@ -336,8 +339,17 @@ class StudentDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Add student invoices and payments
-        from fees.models import FeeInvoice
-        context['invoices'] = FeeInvoice.objects.filter(student=self.object).select_related('fee_structure').prefetch_related('payments').order_by('-issued_date')
+        from fees.models import FeeInvoice, FeePayment
+        from django.db.models import Sum
+        invoices = FeeInvoice.objects.filter(student=self.object).select_related('fee_structure').prefetch_related('payments').order_by('-issued_date')
+        context['invoices'] = invoices
+
+        # Totals for the student
+        total_invoiced = invoices.aggregate(t=Sum('amount'))['t'] or 0
+        total_paid = FeePayment.objects.filter(invoice__student=self.object, status='confirmed').aggregate(t=Sum('amount'))['t'] or 0
+        context['student_total_invoiced'] = total_invoiced
+        context['student_total_paid'] = total_paid
+        context['student_balance'] = total_invoiced - total_paid
         return context
 
 
@@ -691,3 +703,27 @@ def export_students(request, format='excel'):
         return export_to_excel(data, headers, filename)
     else:
         return export_to_csv(data, headers, filename)
+
+@require_GET
+@login_required
+def student_autocomplete(request):
+    """Return up to 10 student suggestions for typeahead as JSON.
+    Format: [{"id": "<uuid>", "label": "Full Name — AdmissionNumber"}, ...]
+    """
+    q = request.GET.get('q', '').strip()
+    results = []
+    if q:
+        qs = Student.objects.filter(school=get_default_school()).select_related('user')
+        # search across first/last name and admission_number
+        qs = qs.filter(
+            user__first_name__icontains=q
+        ) | qs.filter(
+            user__last_name__icontains=q
+        ) | qs.filter(
+            admission_number__icontains=q
+        )
+        qs = qs.order_by('user__first_name')[:10]
+        for s in qs:
+            label = f"{s.user.get_full_name()} — {s.admission_number}"
+            results.append({"id": str(s.id), "label": escape(label)})
+    return JsonResponse(results, safe=False)

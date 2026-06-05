@@ -20,4 +20,5 @@ urlpatterns = [
     path('statement/<uuid:student_id>/', views.student_fee_statement, name='student_statement'),
     path('expenses/', views.expense_list, name='expense_list'),
     path('payment-config/', views.payment_config, name='payment_config'),
+    path('ajax/invoices/', views.invoice_list_fragment, name='invoice_fragment'),
 ]

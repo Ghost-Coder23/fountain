@@ -132,8 +132,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to load students from IndexedDB if offline
     async function loadOfflineData() {
         if (window.EduCoreOffline && window.eduCoreDB) {
-            allStudents = await window.EduCoreOffline.getAll('students');
-            console.log('Loaded students from IndexedDB:', allStudents);
+            try {
+                allStudents = await window.EduCoreOffline.getAll('students');
+                console.log('Loaded students from IndexedDB:', allStudents);
+            } catch (e) {
+                console.warn('Failed loading offline students', e);
+                allStudents = [];
+            }
         }
     }
 
@@ -144,23 +149,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (searchTerm) {
             filtered = window.EduCoreOffline.searchStudents(filtered, searchTerm);
         }
-        window.EduCoreOffline.renderStudents(filtered, tableBody);
+        if (filtered && filtered.length) {
+            window.EduCoreOffline.renderStudents(filtered, tableBody);
+        }
     }
 
-    // Check if we're offline and handle accordingly
+    // Only run offline replacement when navigator reports offline and we have offline data
     if (!navigator.onLine) {
         await loadOfflineData();
-        // Replace form submission to use local search
-        const searchForm = document.getElementById('student-search-form');
-        searchForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        if (allStudents && allStudents.length) {
+            // Replace form submission to use local search
+            const searchForm = document.getElementById('student-search-form');
+            searchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                renderFilteredStudents();
+            });
+            searchInput.addEventListener('input', () => {
+                renderFilteredStudents();
+            });
             renderFilteredStudents();
-        });
-        searchInput.addEventListener('input', () => {
-            renderFilteredStudents();
-        });
-        renderFilteredStudents();
+        } else {
+            console.log('Offline but no local student data available; keeping server-rendered content');
+        }
     }
+
+    // Live autocomplete when online
+    let acTimer = null;
+    async function fetchSuggestions(q) {
+        if (!q) return;
+        const resp = await fetch(`{% url 'academics:student_autocomplete' %}?q=${encodeURIComponent(q)}`);
+        if (!resp.ok) return [];
+        return resp.json();
+    }
+
+    function showSuggestions(items) {
+        let list = document.getElementById('student-suggestion-list');
+        if (!list) {
+            list = document.createElement('div');
+            list.id = 'student-suggestion-list';
+            list.className = 'list-group position-absolute';
+            list.style.zIndex = 1050;
+            searchInput.parentNode.appendChild(list);
+        }
+        list.innerHTML = '';
+        items.forEach(it => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action small';
+            a.textContent = it.label;
+            a.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                searchInput.value = it.label.split(' — ')[0];
+                // submit form
+                searchInput.form.submit();
+            });
+            list.appendChild(a);
+        });
+        if (!items.length && list.parentNode) {
+            list.remove();
+        }
+    }
+
+    searchInput.addEventListener('input', (e) => {
+        if (!navigator.onLine) return; // only online
+        clearTimeout(acTimer);
+        const q = e.target.value.trim();
+        acTimer = setTimeout(async () => {
+            if (!q) return showSuggestions([]);
+            const items = await fetchSuggestions(q);
+            showSuggestions(items || []);
+        }, 250);
+    });
+
 });
 </script>
 {% endblock %}

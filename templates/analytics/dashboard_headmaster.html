@@ -89,6 +89,33 @@
   </div>
 
   <div class="row g-3 mb-4">
+    <div class="col-3">
+      <div class="mini-box" data-status="unpaid" title="Click to view unpaid invoices">
+        <div class="mini-value text-danger">{{ unpaid_invoices|default:0 }}</div>
+        <div class="mini-label">Unpaid Invoices</div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="mini-box" data-status="partial" title="Click to view partially paid invoices">
+        <div class="mini-value text-warning">{{ partial_invoices|default:0 }}</div>
+        <div class="mini-label">Partially Paid</div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="mini-box" data-status="paid" title="Click to view paid invoices">
+        <div class="mini-value text-success">{{ total_paid|default:0 }}</div>
+        <div class="mini-label">Paid Amount</div>
+      </div>
+    </div>
+    <div class="col-3">
+      <div class="mini-box" data-status="overdue" title="Click to view overdue invoices">
+        <div class="mini-value text-danger">{{ overdue_invoices|default:0 }}</div>
+        <div class="mini-label">Overdue</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
     <div class="col-lg-6">
       <div class="card dashboard-card h-100">
         <div class="card-header"><i class="bi bi-calendar-check me-2"></i>Attendance Operations</div>
@@ -261,5 +288,90 @@
     </div>
   </div>
   {% endif %}
+
+  <div class="modal fade" id="invoicesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Invoices</h5>
+          <div class="input-group" style="width:420px;max-width:60%;margin-left:1rem;">
+            <input type="text" id="invoices-modal-search" class="form-control form-control-sm" placeholder="Search invoices or student...">
+            <button class="btn btn-sm btn-outline-secondary" id="invoices-modal-back">Back</button>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="invoices-modal-body">Loading...</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const modalEl = document.getElementById('invoicesModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const body = document.getElementById('invoices-modal-body');
+    const searchInput = document.getElementById('invoices-modal-search');
+    const backBtn = document.getElementById('invoices-modal-back');
+
+    async function loadInvoices(status, q) {
+      body.innerHTML = '<div class="text-center p-3">Loading...</div>';
+      const url = new URL(`{% url 'fees:invoice_fragment' %}`, window.location.origin);
+      if (status) url.searchParams.set('status', status);
+      if (q) url.searchParams.set('search', q);
+      try {
+        const resp = await fetch(url.toString());
+        if (!resp.ok) throw new Error('Network response was not ok');
+        const data = await resp.json();
+        body.innerHTML = data.html || '<div class="text-muted">No data</div>';
+      } catch (e) {
+        body.innerHTML = `<div class="text-danger">Error loading invoices: ${e.message}</div>`;
+      }
+    }
+
+    // Attach click handlers to tiles with data-status
+    document.querySelectorAll('.headmaster-dashboard [data-status]').forEach(tile => {
+      const status = tile.dataset.status;
+      tile.style.cursor = 'pointer';
+      tile.addEventListener('click', async () => {
+        await loadInvoices(status, '');
+        modal.show();
+      });
+    });
+
+    // Back button simply clears search and reloads current status if any
+    backBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      // reload currently loaded status (if present in modal body via data attribute)
+      const currentStatus = body.dataset.currentStatus || '';
+      loadInvoices(currentStatus, '');
+    });
+
+    // Modal search with debounce
+    let timer = null;
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const q = e.target.value.trim();
+        const currentStatus = body.dataset.currentStatus || '';
+        loadInvoices(currentStatus, q);
+      }, 350);
+    });
+
+    // When fragment is loaded, set body.dataset.currentStatus so back works
+    // We rely on the server-side fragment; when we set body.innerHTML above we can set the data here
+    const observer = new MutationObserver(() => {
+      // Attempt to read a hidden input in the fragment that carries status
+      const st = body.querySelector('input[name="__invoices_status"]');
+      if (st) body.dataset.currentStatus = st.value;
+    });
+    observer.observe(body, { childList: true, subtree: true });
+
+  });
+  </script>
 </div>
 {% endblock %}

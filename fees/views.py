@@ -7,10 +7,11 @@ from datetime import date
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 import io
+from django.template.loader import render_to_string
 
 from .models import FeeStructure, FeeInvoice, FeePayment, PaymentConfig, Expense, ExpenseCategory
 from .forms import FeeStructureForm, FeeInvoiceForm, FeePaymentForm, PaymentConfigForm, ExpenseForm, ExpenseCategoryForm, QuickPaymentForm
@@ -529,3 +530,35 @@ def invoice_pdf(request, pk):
     response = HttpResponse(buffer.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
     return response
+
+
+@login_required
+@require_role(['headmaster'])
+def invoice_list_fragment(request):
+    """Return rendered HTML fragment of invoices filtered by status for AJAX/modal.
+    Accepts GET params: status (unpaid|partial|paid|overdue), search, page
+    """
+    school = get_default_school()
+    status = request.GET.get('status')
+    search = request.GET.get('search', '').strip()
+
+    invoices = FeeInvoice.objects.filter(school=school).select_related('student__user')
+    if status:
+        if status == 'overdue':
+            invoices = invoices.filter(status__in=['unpaid', 'partial'], due_date__lt=timezone.now().date())
+        else:
+            invoices = invoices.filter(status=status)
+
+    if search:
+        invoices = invoices.filter(
+            student__user__first_name__icontains=search
+        ) | invoices.filter(
+            student__user__last_name__icontains=search
+        ) | invoices.filter(
+            invoice_number__icontains=search
+        )
+
+    invoices = invoices.order_by('-issued_date')[:100]
+
+    html = render_to_string('fees/partials/invoice_fragment.html', {'invoices': invoices}, request=request)
+    return JsonResponse({'html': html})
