@@ -77,6 +77,28 @@
 </a>
 <a href="{% url 'academics:student_list' %}" class="btn btn-outline-secondary ms-2">Back to List</a>
 
+<!-- Student fee summary -->
+<div class="row g-3 mt-3">
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <div class="small text-muted">Total Invoiced</div>
+        <div class="h5 fw-bold">{{ student_total_invoiced|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <div class="small text-muted">Total Paid</div>
+        <div class="h5 fw-bold text-success">{{ student_total_paid|default:0 }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center p-3">
+        <div class="small text-muted">Balance</div>
+        <div class="h5 fw-bold {% if student_balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ student_balance|default:0 }}</div>
+      </div>
+    </div>
+  </div>
+
 <div class="card mt-3">
   <div class="card-header">Fee Invoices</div>
   <div class="card-body p-0">

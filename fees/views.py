@@ -12,6 +12,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 import io
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from .models import FeeStructure, FeeInvoice, FeePayment, PaymentConfig, Expense, ExpenseCategory
 from .forms import FeeStructureForm, FeeInvoiceForm, FeePaymentForm, PaymentConfigForm, ExpenseForm, ExpenseCategoryForm, QuickPaymentForm
@@ -541,6 +542,7 @@ def invoice_list_fragment(request):
     school = get_default_school()
     status = request.GET.get('status')
     search = request.GET.get('search', '').strip()
+    page = request.GET.get('page', 1)
 
     invoices = FeeInvoice.objects.filter(school=school).select_related('student__user')
     if status:
@@ -558,7 +560,28 @@ def invoice_list_fragment(request):
             invoice_number__icontains=search
         )
 
-    invoices = invoices.order_by('-issued_date')[:100]
+    invoices = invoices.order_by('-issued_date')
 
-    html = render_to_string('fees/partials/invoice_fragment.html', {'invoices': invoices}, request=request)
+    paginator = Paginator(invoices, 12)
+    try:
+        invoices_page = paginator.page(page)
+    except PageNotAnInteger:
+        invoices_page = paginator.page(1)
+    except EmptyPage:
+        invoices_page = paginator.page(paginator.num_pages)
+
+    html = render_to_string('fees/partials/invoice_fragment.html', {'invoices': invoices_page.object_list, 'page_obj': invoices_page}, request=request)
+    return JsonResponse({'html': html})
+
+
+@login_required
+@require_role(['headmaster'])
+def invoice_detail_fragment(request, pk):
+    """Return rendered HTML fragment for a single invoice (AJAX/modal).
+    """
+    school = get_default_school()
+    invoice = get_object_or_404(FeeInvoice, pk=pk, school=school)
+
+    # Render detail fragment
+    html = render_to_string('fees/partials/invoice_detail_fragment.html', {'inv': invoice}, request=request)
     return JsonResponse({'html': html})

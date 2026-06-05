@@ -21,4 +21,5 @@ urlpatterns = [
     path('expenses/', views.expense_list, name='expense_list'),
     path('payment-config/', views.payment_config, name='payment_config'),
     path('ajax/invoices/', views.invoice_list_fragment, name='invoice_fragment'),
+    path('ajax/invoices/<int:pk>/', views.invoice_detail_fragment, name='invoice_detail_fragment'),
 ]

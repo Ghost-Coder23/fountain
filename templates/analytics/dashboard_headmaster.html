@@ -318,11 +318,12 @@
     const searchInput = document.getElementById('invoices-modal-search');
     const backBtn = document.getElementById('invoices-modal-back');
 
-    async function loadInvoices(status, q) {
+    async function loadInvoices(status, q, page=1) {
       body.innerHTML = '<div class="text-center p-3">Loading...</div>';
       const url = new URL(`{% url 'fees:invoice_fragment' %}`, window.location.origin);
       if (status) url.searchParams.set('status', status);
       if (q) url.searchParams.set('search', q);
+      if (page) url.searchParams.set('page', page);
       try {
         const resp = await fetch(url.toString());
         if (!resp.ok) throw new Error('Network response was not ok');
@@ -370,6 +371,44 @@
       if (st) body.dataset.currentStatus = st.value;
     });
     observer.observe(body, { childList: true, subtree: true });
+
+    // Handle pagination clicks from fragment
+    body.addEventListener('click', (ev) => {
+      const a = ev.target.closest('.invoice-fragment-page');
+      if (!a) return;
+      ev.preventDefault();
+      const page = a.dataset.page;
+      const currentStatus = body.dataset.currentStatus || '';
+      loadInvoices(currentStatus, searchInput.value.trim(), page);
+    });
+
+    // Handle clicks on invoice 'View' buttons inside modal to load detail fragment
+    body.addEventListener('click', async (ev) => {
+      const viewBtn = ev.target.closest('.invoice-view-btn');
+      if (viewBtn) {
+        ev.preventDefault();
+        const invId = viewBtn.dataset.invId;
+        if (!invId) return;
+        body.innerHTML = '<div class="text-center p-3">Loading invoice...</div>';
+        try {
+          const resp = await fetch(`{% url 'fees:invoice_detail_fragment' 0 %}`.replace('/0/', `/${invId}/`));
+          if (!resp.ok) throw new Error('Failed to fetch invoice detail');
+          const data = await resp.json();
+          body.innerHTML = data.html || '<div class="text-muted">No details available.</div>';
+          // wire detail back button
+          const detailBack = body.querySelector('#invoice-detail-back');
+          if (detailBack) {
+            detailBack.addEventListener('click', (e) => {
+              e.preventDefault();
+              const currentStatus = body.dataset.currentStatus || '';
+              loadInvoices(currentStatus, searchInput.value.trim());
+            });
+          }
+        } catch (e) {
+          body.innerHTML = `<div class="text-danger">${e.message}</div>`;
+        }
+      }
+    });
 
   });
   </script>

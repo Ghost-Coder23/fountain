@@ -1,0 +1,47 @@
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h5>Invoice {{ inv.invoice_number }}</h5>
+    <div class="text-muted small">Student: {{ inv.student.user.get_full_name }}</div>
+    <div class="text-muted small">Issued: {{ inv.issued_date }}</div>
+  </div>
+  <div>
+    <button class="btn btn-sm btn-outline-secondary" id="invoice-detail-back">Back to list</button>
+  </div>
+</div>
+<hr>
+<div class="row g-3">
+  <div class="col-md-6">
+    <table class="table table-sm mb-0">
+      <tr><th>Fee</th><td>{{ inv.fee_structure.name|default:'General' }}</td></tr>
+      <tr><th>Amount</th><td>{{ inv.currency }} {{ inv.amount }}</td></tr>
+      <tr><th>Paid</th><td>{{ inv.currency }} {{ inv.amount_paid }}</td></tr>
+      <tr><th>Balance</th><td class="{% if inv.balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ inv.currency }} {{ inv.balance }}</td></tr>
+    </table>
+  </div>
+  <div class="col-md-6">
+    <table class="table table-sm mb-0">
+      <tr><th>Due Date</th><td>{{ inv.due_date|default:'-' }}</td></tr>
+      <tr><th>Status</th><td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td></tr>
+      <tr><th>Notes</th><td>{{ inv.notes|default:'-' }}</td></tr>
+    </table>
+  </div>
+</div>
+<hr>
+<div>
+  <h6>Payments</h6>
+  <table class="table table-sm">
+    <thead><tr><th>Amount</th><th>Method</th><th>Date</th><th>Received By</th></tr></thead>
+    <tbody>
+      {% for p in inv.payments.all %}
+      <tr>
+        <td>{{ p.currency }} {{ p.amount }}</td>
+        <td>{{ p.get_method_display }}</td>
+        <td>{{ p.payment_date }}</td>
+        <td>{{ p.received_by }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-muted">No payments recorded for this invoice.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
