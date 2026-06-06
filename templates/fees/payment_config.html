@@ -36,10 +36,48 @@
             <div class="col-md-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Account Number</label>{{ form.bank_account_number }}</div>
             <div class="col-md-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Branch</label>{{ form.bank_branch }}</div>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Auto-generate Invoices</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="auto_generate_invoices" id="id_auto_generate_invoices" {% if form.auto_generate_invoices.value %}checked{% endif %}>
+              <label class="form-check-label" for="id_auto_generate_invoices">Enable automatic monthly invoice generation</label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="id_invoice_generation_day" class="form-label">Invoice Generation Day</label>
+            <input type="number" min="1" max="28" name="invoice_generation_day" id="id_invoice_generation_day" class="form-control form-control-sm" value="{{ form.invoice_generation_day.value|default:1 }}">
+            <div class="form-text">Recommended day between 1 and 28</div>
+          </div>
           <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Settings</button>
+          <button type="button" id="run-generate-now" class="btn btn-outline-secondary ms-2"><i class="bi bi-lightning me-1"></i>Run now</button>
+          <div id="run-generate-output" class="mt-2" style="white-space:pre-wrap;font-family:monospace;display:none;"></div>
         </form>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('run-generate-now');
+  const out = document.getElementById('run-generate-output');
+  btn.addEventListener('click', async () => {
+    if (!confirm('Run monthly invoice generation now? This may create many invoices.')) return;
+    btn.disabled = true; btn.innerText = 'Running...'; out.style.display = 'none'; out.innerText = '';
+    try {
+      const resp = await fetch('{% url "fees:run_generate_invoices" %}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}});
+      const data = await resp.json();
+      if (data.ok) {
+        out.innerText = data.output || 'Completed.';
+      } else {
+        out.innerText = 'Error: ' + (data.error || 'Unknown');
+      }
+    } catch (e) {
+      out.innerText = 'Request failed: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.innerText = 'Run now'; out.style.display = 'block';
+    }
+  });
+});
+</script>
 {% endblock %}

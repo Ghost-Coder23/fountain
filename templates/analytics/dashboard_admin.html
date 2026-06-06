@@ -1,5 +1,5 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Admin Dashboard{% endblock %}
+{% block title %}Director Dashboard{% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -133,7 +133,7 @@
   });
 </script>
 {% endblock %}
-{% block page_title %}Admin Dashboard{% endblock %}
+{% block page_title %}Director Portal{% endblock %}
 {% block extra_css %}
 <style>
   .admin-dashboard .stat-tile {
@@ -234,6 +234,26 @@
 {% endblock %}
 {% block content %}
 <div class="admin-dashboard">
+  <div class="card dashboard-card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5 col-lg-4">
+          <label class="form-label small fw-bold text-muted text-uppercase">Billing Period</label>
+          <select name="period" class="form-select" onchange="this.form.submit()">
+            {% for option in billing_period.options %}
+            <option value="{{ option.key }}" {% if option.key == billing_period.key %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-7 col-lg-8">
+          <div class="text-muted small">
+            Showing invoices, collections, outstanding balances, unpaid invoices, partial invoices, and overdue invoices for <strong>{{ billing_period.label }}</strong>.
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
       <a href="{% url 'academics:student_list' %}" class="stat-tile">
@@ -286,8 +306,8 @@
     <div class="col-lg-7">
       <div class="card dashboard-card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-cash-coin me-2"></i>Fee Summary</span>
-          <a href="{% url 'fees:home' %}" class="btn btn-sm btn-outline-primary">Manage Fees</a>
+          <span><i class="bi bi-cash-coin me-2"></i>Fee Summary - {{ billing_period.label }}</span>
+          <a href="{% url 'fees:home' %}?{{ period_query }}" class="btn btn-sm btn-outline-primary">Manage Fees</a>
         </div>
         <div class="card-body">
           <div class="section-note mb-3">Collections, outstanding balances, and reconciliation status.</div>
@@ -339,7 +359,7 @@
       <div class="card dashboard-card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span><i class="bi bi-receipt me-2"></i>Invoices Overview</span>
-          <a href="{% url 'fees:home' %}" class="btn btn-sm btn-outline-primary">Manage Fees</a>
+          <a href="{% url 'fees:home' %}?{{ period_query }}" class="btn btn-sm btn-outline-primary">Manage Fees</a>
         </div>
         <div class="card-body">
           <div class="row g-2">
@@ -431,7 +451,7 @@
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:home' %}" class="action-btn text-decoration-none">
+              <a href="{% url 'fees:home' %}?{{ period_query }}" class="action-btn text-decoration-none">
                 <i class="bi bi-graph-up-arrow text-primary"></i>
                 <span>Finance Dashboard</span>
               </a>
@@ -443,19 +463,19 @@
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:create_invoice' %}" class="action-btn text-decoration-none">
+              <a href="{% url 'fees:create_invoice' %}?{{ period_query }}" class="action-btn text-decoration-none">
                 <i class="bi bi-receipt text-info"></i>
                 <span>Create Invoice</span>
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:bulk_invoice' %}" class="action-btn text-decoration-none">
+              <a href="{% url 'fees:bulk_invoice' %}?{{ period_query }}" class="action-btn text-decoration-none">
                 <i class="bi bi-stack text-success"></i>
                 <span>Bulk Invoices</span>
               </a>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
-              <a href="{% url 'fees:invoice_list' %}" class="action-btn text-decoration-none">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}" class="action-btn text-decoration-none">
                 <i class="bi bi-cash-coin text-primary"></i>
                 <span>Record Payment</span>
               </a>
@@ -466,6 +486,12 @@
                 <i class="bi bi-gear text-secondary"></i>
                 <span>Payment Config</span>
               </a>
+            </div>
+            <div class="col-6 col-md-4 col-lg-2">
+              <button id="open-create-senior" class="action-btn btn btn-ghost">
+                <i class="bi bi-person-plus text-primary"></i>
+                <span>Create Senior</span>
+              </button>
             </div>
             {% endif %}
             <div class="col-6 col-md-4 col-lg-2">
@@ -621,7 +647,7 @@
           <canvas id="feeChart" style="max-height: 200px;"></canvas>
           <div class="mt-3">
             <h6 class="mb-0 fw-bold"><span class="money-amount">${{ total_paid|floatformat:0 }}</span></h6>
-            <small class="text-muted">Total Collected This Term</small>
+            <small class="text-muted">Total Collected - {{ billing_period.label }}</small>
           </div>
         </div>
       </div>
@@ -655,7 +681,7 @@
       <div class="card dashboard-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span><i class="bi bi-receipt me-2"></i>Recent Invoices</span>
-          <a href="{% url 'fees:invoice_list' %}" class="btn btn-sm btn-outline-primary py-0 px-2">All</a>
+          <a href="{% url 'fees:invoice_list' %}?{{ period_query }}" class="btn btn-sm btn-outline-primary py-0 px-2">All</a>
         </div>
         <div class="card-body p-0">
           <table class="table soft-table table-hover mb-0">
@@ -681,7 +707,7 @@
       <div class="card dashboard-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span><i class="bi bi-cash-stack me-2"></i>Recent Payments</span>
-          <a href="{% url 'fees:home' %}" class="btn btn-sm btn-outline-primary py-0 px-2">All</a>
+          <a href="{% url 'fees:home' %}?{{ period_query }}" class="btn btn-sm btn-outline-primary py-0 px-2">All</a>
         </div>
         <div class="card-body p-0">
           <table class="table soft-table table-hover mb-0">
@@ -704,5 +730,75 @@
       </div>
     </div>
   </div>
+
+  {% if role == 'headmaster' or role == 'secretary' %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header"><i class="bi bi-question-circle me-2"></i>Help & Documentation</div>
+        <div class="card-body">
+          {% include 'analytics/partials/in_app_docs.html' %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Create Senior Modal -->
+  <div class="modal fade" id="createSeniorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Senior Account</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="create-senior-form">
+            {% csrf_token %}
+            <div class="mb-2"><label class="form-label">Email</label><input type="email" name="email" class="form-control" required></div>
+            <div class="mb-2"><label class="form-label">Username (optional)</label><input name="username" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">First name</label><input name="first_name" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Last name</label><input name="last_name" class="form-control"></div>
+            <div id="create-senior-output" class="mt-2" style="white-space:pre-wrap;display:none;"></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="create-senior-submit" class="btn btn-primary">Create</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('open-create-senior');
+    const modalEl = document.getElementById('createSeniorModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const form = document.getElementById('create-senior-form');
+    const submit = document.getElementById('create-senior-submit');
+    const out = document.getElementById('create-senior-output');
+
+    openBtn && openBtn.addEventListener('click', () => modal.show());
+
+    submit && submit.addEventListener('click', async () => {
+      const fd = new FormData(form);
+      submit.disabled = true; submit.innerText = 'Creating...'; out.style.display = 'none'; out.innerText = '';
+      try {
+        const resp = await fetch('{% url "analytics:create_senior_account" %}', {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}, body: fd});
+        const data = await resp.json();
+        if (data.ok) {
+          out.innerText = `Created user: ${data.username}\nPassword: ${data.password}`;
+        } else {
+          out.innerText = `Error: ${data.error || 'Unknown'}`;
+        }
+      } catch (e) {
+        out.innerText = 'Request failed: ' + e.message;
+      } finally {
+        submit.disabled = false; submit.innerText = 'Create'; out.style.display = 'block';
+      }
+    });
+  });
+  </script>
 </div>
 {% endblock %}

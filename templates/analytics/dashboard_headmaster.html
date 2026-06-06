@@ -1,6 +1,6 @@
 {% extends "base_dashboard.html" %}
-{% block title %}Headmaster Dashboard{% endblock %}
-{% block page_title %}Headmaster Dashboard{% endblock %}
+{% block title %}Director Dashboard{% endblock %}
+{% block page_title %}Director Portal{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -169,6 +169,19 @@
     </div>
   </div>
 
+  {% if user_role == 'headmaster' or user_role == 'secretary' %}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card dashboard-card">
+        <div class="card-header"><i class="bi bi-question-circle me-2"></i>Help & Documentation</div>
+        <div class="card-body">
+          {% include 'analytics/partials/in_app_docs.html' %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="row g-3">
     {% if at_risk %}
     <div class="col-xl-6">
@@ -289,6 +302,38 @@
   </div>
   {% endif %}
 
+  <div class="card dashboard-card mt-3">
+    <div class="card-header"><i class="bi bi-calendar3 me-1"></i>Previous Month Summary — {{ prev_month_label }}</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="mini-box">
+            <div class="mini-value">{{ prev_total_invoiced|floatformat:2 }}</div>
+            <div class="mini-label">Total Invoiced</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="mini-box">
+            <div class="mini-value text-success">{{ prev_total_collected|floatformat:2 }}</div>
+            <div class="mini-label">Total Collected</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="mini-box">
+            <div class="mini-value text-warning">{{ prev_outstanding|floatformat:2 }}</div>
+            <div class="mini-label">Outstanding</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="mini-box">
+            <div class="mini-value text-danger">{{ prev_overdue_count }}</div>
+            <div class="mini-label">Overdue Invoices</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="invoicesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
@@ -321,6 +366,8 @@
     async function loadInvoices(status, q, page=1) {
       body.innerHTML = '<div class="text-center p-3">Loading...</div>';
       const url = new URL(`{% url 'fees:invoice_fragment' %}`, window.location.origin);
+      const currentPeriod = new URLSearchParams(window.location.search).get('period');
+      if (currentPeriod) url.searchParams.set('period', currentPeriod);
       if (status) url.searchParams.set('status', status);
       if (q) url.searchParams.set('search', q);
       if (page) url.searchParams.set('page', page);

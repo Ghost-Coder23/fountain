@@ -89,3 +89,24 @@ class Announcement(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.school.name}"
+
+
+class Activity(models.Model):
+    """Lightweight activity stream for live updates in dashboard."""
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='activities')
+    actor = models.ForeignKey('schools.SchoolUser', on_delete=models.SET_NULL, null=True, blank=True)
+    verb = models.CharField(max_length=100)  # e.g. 'voided invoice', 'created invoice'
+    target_type = models.CharField(max_length=50, blank=True)
+    target_id = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    is_public = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TenantManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.actor} {self.verb} {self.target_type}#{self.target_id}"

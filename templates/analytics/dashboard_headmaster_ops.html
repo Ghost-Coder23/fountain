@@ -1,0 +1,112 @@
+{% extends 'base_dashboard.html' %}
+{% block title %}Senior Dashboard{% endblock %}
+{% block page_title %}Senior Dashboard{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="fw-semibold small text-muted">Unpaid Students</div>
+        <div class="h2 mt-1">{{ unpaid_students }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="fw-semibold small text-muted">Partially Paid</div>
+        <div class="h2 mt-1">{{ partial_students }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="fw-semibold small text-muted">Overdue Invoices</div>
+        <div class="h2 mt-1">{{ overdue_invoices }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <div class="fw-semibold small text-muted">Recent Payments</div>
+        <div class="h5 mt-1">{{ recent_payments|length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Students</span>
+          <form class="d-flex" method="get">
+            <input name="student_search" class="form-control form-control-sm me-2" placeholder="Search students..." value="{{ student_q }}">
+            <button class="btn btn-sm btn-outline-secondary">Search</button>
+          </form>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Student</th><th>Class</th><th>Admission</th><th>Balance</th><th></th></tr></thead>
+            <tbody>
+              {% if students_with_balance %}
+                {% for item in students_with_balance %}
+                {% with s=item.student balance=item.balance %}
+                <tr>
+                  <td><a href="{% url 'academics:student_detail' s.pk %}">{{ s.user.get_full_name }}</a></td>
+                  <td>{{ s.current_class }}</td>
+                  <td>{{ s.admission_number }}</td>
+                  <td>{{ balance }}</td>
+                  <td><a href="{% url 'fees:student_statement' s.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No students found.</td></tr>
+                {% endfor %}
+              {% else %}
+                {% for s in students %}
+                <tr>
+                  <td><a href="{% url 'academics:student_detail' s.pk %}">{{ s.user.get_full_name }}</a></td>
+                  <td>{{ s.current_class }}</td>
+                  <td>{{ s.admission_number }}</td>
+                  <td>-</td>
+                  <td><a href="{% url 'fees:student_statement' s.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No students found.</td></tr>
+                {% endfor %}
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Invoices</span>
+          <form class="d-flex" method="get">
+            <input name="invoice_search" class="form-control form-control-sm me-2" placeholder="Search invoices..." value="{{ invoice_q }}">
+            <button class="btn btn-sm btn-outline-secondary">Search</button>
+          </form>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Invoice</th><th>Student</th><th>Amount</th><th>Status</th><th>Due</th><th></th></tr></thead>
+            <tbody>
+              {% for inv in invoices %}
+              <tr>
+                <td>{{ inv.invoice_number }}</td>
+                <td><a href="{% url 'academics:student_detail' inv.student.pk %}">{{ inv.student.user.get_full_name }}</a></td>
+                <td>{{ inv.currency }} {{ inv.amount }}</td>
+                <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
+                <td>{{ inv.due_date }}</td>
+                <td><a href="{% url 'fees:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-muted py-3">No invoices found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

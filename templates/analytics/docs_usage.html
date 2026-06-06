@@ -1,0 +1,12 @@
+{% ex
+{% block page_title %}Usage & Help{% endblock %}tends "base_dashboard.html" %}
+{% block title %}Usage Docs{% endblock %}
+{% block content %}
+  <div class="container mt-4">
+    <div class="card">
+      <div class="card-body">
+        {% include "analytics/partials/in_app_docs.html" %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -559,7 +559,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     <i class="bi bi-mortarboard-fill text-white mb-2 d-block" style="font-size: 2rem;"></i>
   {% endif %}
   <h5>{{ current_school.name|default:"AcademiaLink" }}</h5>
-  <small>{{ school_role|title }} Portal</small>
+  {# Show 'Directors Portal' for headmaster role (labeling change requested) #}
+  {% if school_role == 'headmaster' %}
+    <small>Directors Portal</small>
+  {% else %}
+    <small>{{ school_role|title }} Portal</small>
+  {% endif %}
   </div>
 
   <nav class="py-2">
@@ -795,6 +800,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   <div class="btn-group">
     <button class="btn btn-outline-secondary btn-sm" id="dismissInstall">Not now</button>
     <button class="btn btn-primary btn-sm" id="installBtn">Install</button>
+  </div>
+</div>
+
+<!-- Activity feed panel -->
+<div id="live-activity-feed" class="position-fixed" style="right:16px;bottom:16px;max-width:320px;z-index:1080;">
+  <div class="card shadow-sm">
+    <div class="card-header small fw-bold">Live Activity</div>
+    <div class="card-body p-2" id="activity-body" style="max-height:300px;overflow:auto;font-size:.85rem;"></div>
   </div>
 </div>
 
@@ -1100,6 +1113,21 @@ window.addEventListener('pageshow', (event) => {
     restoreSidebarScroll();
   }
 });
+
+// Activity feed script
+async function loadActivityFeed() {
+  try {
+    const resp = await fetch('{% url "notifications:activity_feed" %}');
+    if (!resp.ok) return;
+    const items = await resp.json();
+    const container = document.getElementById('activity-body');
+    container.innerHTML = items.map(it => `<div class="mb-2"><div class="fw-semibold">${it.actor}</div><div class="text-muted small">${it.verb} <strong>${it.target_type}#${it.target_id}</strong></div><div class="x-small text-muted">${new Date(it.created_at).toLocaleString()}</div></div>`).join('');
+  } catch(e){console.warn('Activity feed load failed', e)}
+}
+// Poll every 5 seconds
+setInterval(loadActivityFeed, 5000);
+// initial load
+loadActivityFeed();
 </script>
 
 <!-- Install App Banner -->

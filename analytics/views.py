@@ -9,12 +9,18 @@ from django.db.models import Count, Avg, Sum, Q, Case, When
 from django.db import models
 from django.http import JsonResponse
 from django.utils import timezone
+from django.conf import settings
+from django.contrib.auth import get_user_model, login as auth_login
+from django.shortcuts import HttpResponse
+from django.utils.crypto import get_random_string
+from django.views.decorators.http import require_POST
 
 from schools.models import SchoolUser, School
 from academics.models import Student, ClassSection, AcademicYear, ParentStudentLink
 from results.models import StudentResult, TermSummary, Term
 from attendance.models import AttendanceSession, AttendanceRecord
 from fees.models import FeeInvoice, FeePayment, Expense
+from fees.periods import filter_invoices_for_period, get_selected_billing_period, period_query_string
 from notifications.models import Notification, Announcement
 from academics.models import Subject
 
@@ -42,8 +48,12 @@ def dashboard(request):
         return redirect('home')
 
     role = membership.role
-    if role in ['headmaster', 'admin']:
+    # Directors and headmasters see the Director dashboard
+    if role in ['admin', 'headmaster']:
         return headmaster_admin_dashboard(request, school, membership)
+    # 'senior' role maps to the Senior operational dashboard
+    if role == 'senior':
+        return headmaster_only_dashboard(request, school, membership)
     elif role == 'secretary':
         return secretary_dashboard(request, school, membership)
     elif role == 'teacher':
@@ -55,10 +65,73 @@ def dashboard(request):
     return redirect('home')
 
 
+def headmaster_only_dashboard(request, school, membership):
+    """Operational dashboard for headmasters — no revenue totals, focused on students, invoices and payments."""
+    today = date.today()
+
+    # Searches
+    student_q = request.GET.get('student_search', '').strip()
+    invoice_q = request.GET.get('invoice_search', '').strip()
+
+    students = Student.objects.filter(school=school, is_active=True).select_related('user', 'current_class')
+    if student_q:
+        students = students.filter(
+            Q(user__first_name__icontains=student_q) |
+            Q(user__last_name__icontains=student_q) |
+            Q(admission_number__icontains=student_q) |
+            Q(parent_email__icontains=student_q)
+        )
+    students = students.order_by('user__last_name')[:200]
+
+    # Compute invoice balances per student for display (avoid template filters)
+    student_ids = [s.id for s in students]
+    invoice_sums = {}
+    if student_ids:
+        sums = FeeInvoice.objects.filter(school=school, student_id__in=student_ids).values('student_id').annotate(total_balance=Sum('balance'))
+        for row in sums:
+            invoice_sums[row['student_id']] = row['total_balance'] or 0
+
+    students_with_balance = []
+    for s in students:
+        students_with_balance.append({'student': s, 'balance': invoice_sums.get(s.id, 0)})
+
+    invoices = FeeInvoice.objects.filter(school=school).select_related('student__user', 'fee_structure')
+    if invoice_q:
+        invoices = invoices.filter(
+            Q(student__user__first_name__icontains=invoice_q) |
+            Q(student__user__last_name__icontains=invoice_q) |
+            Q(invoice_number__icontains=invoice_q) |
+            Q(student__admission_number__icontains=invoice_q)
+        )
+    invoices = invoices.order_by('-issued_date')[:200]
+
+    recent_payments = FeePayment.objects.filter(invoice__school=school, status='confirmed').select_related('invoice__student__user').order_by('-payment_date')[:20]
+
+    # Operational counts
+    unpaid_students = FeeInvoice.objects.filter(school=school, status='unpaid').values('student').distinct().count()
+    partial_students = FeeInvoice.objects.filter(school=school, status='partial').values('student').distinct().count()
+    overdue_invoices = FeeInvoice.objects.filter(school=school, status__in=['unpaid', 'partial'], due_date__lt=today).count()
+
+    context = {
+        'role': 'headmaster',
+        'students_with_balance': students_with_balance,
+        'students': students,
+        'invoices': invoices,
+        'recent_payments': recent_payments,
+        'unpaid_students': unpaid_students,
+        'partial_students': partial_students,
+        'overdue_invoices': overdue_invoices,
+        'student_q': student_q,
+        'invoice_q': invoice_q,
+    }
+    return render(request, 'analytics/dashboard_headmaster_ops.html', context)
+
+
 def headmaster_admin_dashboard(request, school, membership):
     today = date.today()
     current_term = Term.objects.filter(academic_year__school=school, is_current=True).first()
     current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
+    billing_period = get_selected_billing_period(request, school, today=today)
 
     total_students = Student.objects.filter(school=school, is_active=True).count()
     total_teachers = SchoolUser.objects.filter(school=school, role='teacher', is_active=True).count()
@@ -86,30 +159,30 @@ def headmaster_admin_dashboard(request, school, membership):
     week_attendance_pct = round((week_present / week_total) * 100, 1) if week_total > 0 else 0
 
     # Fee summary
-    total_invoiced = FeeInvoice.objects.filter(school=school).aggregate(t=Sum('amount'))['t'] or 0
-    from fees.models import FeePayment
+    invoices_for_period = filter_invoices_for_period(FeeInvoice.objects.filter(school=school), billing_period)
+    total_invoiced = invoices_for_period.aggregate(t=Sum('amount'))['t'] or 0
     total_collected = FeePayment.objects.filter(
-        invoice__school=school, status='confirmed'
+        invoice__in=invoices_for_period, status='confirmed'
     ).aggregate(t=Sum('amount'))['t'] or 0
     total_paid = total_collected
     collection_pct = round((total_collected / total_invoiced) * 100, 1) if total_invoiced > 0 else 0
     outstanding = total_invoiced - total_collected
-    overdue_count = FeeInvoice.objects.filter(school=school, status__in=['unpaid','partial'], due_date__lt=today).count()
-    unpaid_invoices = FeeInvoice.objects.filter(school=school, status='unpaid').count()
-    partial_invoices = FeeInvoice.objects.filter(school=school, status='partial').count()
-    overdue_invoices = FeeInvoice.objects.filter(school=school, status='overdue').count()
-    recent_invoices = FeeInvoice.objects.filter(school=school).select_related(
+    overdue_count = invoices_for_period.filter(status__in=['unpaid','partial', 'overdue'], due_date__lt=today).count()
+    unpaid_invoices = invoices_for_period.filter(status='unpaid').count()
+    partial_invoices = invoices_for_period.filter(status='partial').count()
+    overdue_invoices = invoices_for_period.filter(status__in=['unpaid','partial', 'overdue'], due_date__lt=today).count()
+    recent_invoices = invoices_for_period.select_related(
         'student__user'
     ).order_by('-created_at')[:8]
 
     # Recent payments
     recent_payments = FeePayment.objects.filter(
-        invoice__school=school
+        invoice__in=invoices_for_period
     ).select_related('invoice__student__user').order_by('-payment_date')[:8]
 
     # Pending payments
     pending_payments_count = FeePayment.objects.filter(
-        invoice__school=school, status='pending'
+        invoice__in=invoices_for_period, status='pending'
     ).count()
 
     # At-risk students (attendance < 80% this month)
@@ -203,6 +276,43 @@ def headmaster_admin_dashboard(request, school, membership):
         revenue_data.append(float(rev))
         expense_data.append(float(exp))
         finance_labels.append(m_start.strftime('%b'))
+
+    # --- Previous month summary for dashboard ---
+    # compute start and end for previous calendar month
+    if today.month == 1:
+        prev_month = 12
+        prev_year = today.year - 1
+    else:
+        prev_month = today.month - 1
+        prev_year = today.year
+    prev_start = date(prev_year, prev_month, 1)
+    if prev_month == 12:
+        prev_end = date(prev_year + 1, 1, 1)
+    else:
+        prev_end = date(prev_year, prev_month + 1, 1)
+
+    prev_total_invoiced = FeeInvoice.objects.filter(
+        school=school,
+        issued_date__gte=prev_start,
+        issued_date__lt=prev_end
+    ).aggregate(t=Sum('amount'))['t'] or 0
+
+    prev_total_collected = FeePayment.objects.filter(
+        invoice__school=school,
+        payment_date__gte=prev_start,
+        payment_date__lt=prev_end,
+        status='confirmed'
+    ).aggregate(t=Sum('amount'))['t'] or 0
+
+    prev_outstanding = prev_total_invoiced - prev_total_collected
+
+    prev_overdue_count = FeeInvoice.objects.filter(
+        school=school,
+        status__in=['unpaid', 'partial'],
+        due_date__lt=prev_end
+    ).count()
+
+    prev_month_label = prev_start.strftime('%B %Y')
 
     # Recent Activity Stream
     activity_feed = []
@@ -334,6 +444,14 @@ def headmaster_admin_dashboard(request, school, membership):
         'revenue_data': revenue_data,
         'expense_data': expense_data,
         'activity_feed': activity_feed,
+        'billing_period': billing_period,
+        'period_query': period_query_string(billing_period),
+        # previous month summary
+        'prev_month_label': prev_month_label,
+        'prev_total_invoiced': prev_total_invoiced,
+        'prev_total_collected': prev_total_collected,
+        'prev_outstanding': prev_outstanding,
+        'prev_overdue_count': prev_overdue_count,
     }
     return render(request, 'analytics/dashboard_admin.html', context)
 
@@ -342,6 +460,7 @@ def secretary_dashboard(request, school, membership):
     today = date.today()
     current_term = Term.objects.filter(academic_year__school=school, is_current=True).first()
     current_year = AcademicYear.objects.filter(school=school, is_current=True).first()
+    billing_period = get_selected_billing_period(request, school, today=today)
 
     total_students = Student.objects.filter(school=school, is_active=True).count()
     total_teachers = SchoolUser.objects.filter(school=school, role='teacher', is_active=True).count()
@@ -369,22 +488,23 @@ def secretary_dashboard(request, school, membership):
     week_attendance_pct = round((week_present / week_total) * 100, 1) if week_total > 0 else 0
 
     # Recent invoices and payments (without showing amounts)
-    recent_invoices = FeeInvoice.objects.filter(school=school).select_related(
+    invoices_for_period = filter_invoices_for_period(FeeInvoice.objects.filter(school=school), billing_period)
+    recent_invoices = invoices_for_period.select_related(
         'student__user'
     ).order_by('-created_at')[:8]
 
     recent_payments = FeePayment.objects.filter(
-        invoice__school=school
+        invoice__in=invoices_for_period
     ).select_related('invoice__student__user').order_by('-payment_date')[:8]
 
     pending_payments_count = FeePayment.objects.filter(
-        invoice__school=school, status='pending'
+        invoice__in=invoices_for_period, status='pending'
     ).count()
 
     # Invoice stats
-    unpaid_invoices = FeeInvoice.objects.filter(school=school, status='unpaid').count()
-    partial_invoices = FeeInvoice.objects.filter(school=school, status='partial').count()
-    overdue_invoices = FeeInvoice.objects.filter(school=school, status='overdue').count()
+    unpaid_invoices = invoices_for_period.filter(status='unpaid').count()
+    partial_invoices = invoices_for_period.filter(status='partial').count()
+    overdue_invoices = invoices_for_period.filter(status__in=['unpaid','partial', 'overdue'], due_date__lt=today).count()
 
     # At-risk students (attendance < 80% this month)
     month_start = today.replace(day=1)
@@ -544,6 +664,8 @@ def secretary_dashboard(request, school, membership):
         'enrollment_data': enrollment_data,
         'enrollment_labels': enrollment_labels,
         'activity_feed': activity_feed,
+        'billing_period': billing_period,
+        'period_query': period_query_string(billing_period),
     }
     return render(request, 'analytics/dashboard_admin.html', context)
 
@@ -935,3 +1057,132 @@ def api_chart_fees(request):
         ).aggregate(t=Sum('amount'))['t'] or 0
         data.append({'month': f'{year}-{month:02d}', 'collected': float(collected)})
     return JsonResponse({'data': data})
+
+
+@login_required
+def docs_usage(request):
+    """Standalone usage docs page that renders the in-app docs partial."""
+    school = get_default_school()
+    return render(request, 'analytics/docs_usage.html', {'school': school})
+
+
+def dev_create_demo_headmaster(request):
+    """Development helper: create a demo headmaster account and log in.
+    Only works when settings.DEBUG is True.
+    """
+    if not settings.DEBUG:
+        return HttpResponse('Not available', status=404)
+    User = get_user_model()
+    username = 'demo_headmaster'
+    password = 'Headmaster123!'
+
+    user, created = User.objects.get_or_create(username=username, defaults={'email': 'demo_headmaster@example.com'})
+    if created:
+        user.set_password(password)
+        user.is_active = True
+        user.save()
+    else:
+        # Ensure password is known for demo (overwrite)
+        user.set_password(password)
+        user.save()
+
+    # Attach to default school
+    school = get_default_school()
+    from schools.models import SchoolUser
+    su, _ = SchoolUser.objects.get_or_create(user=user, school=school, defaults={'role': 'headmaster', 'is_active': True})
+    if su.role != 'headmaster':
+        su.role = 'headmaster'
+        su.is_active = True
+        su.save()
+
+    # Log the user in
+    auth_login(request, user)
+
+    # Provide a short HTML response with credentials and a link to dashboard
+    html = f"""
+    <div style='font-family:system-ui,Arial;margin:30px'>
+      <h3>Demo Headmaster Created</h3>
+      <p>Username: <strong>{username}</strong></p>
+      <p>Password: <strong>{password}</strong></p>
+      <p><a href='""" + (settings.LOGIN_REDIRECT_URL or '/analytics/') + """'>Open Headmaster Dashboard</a></p>
+    </div>
+    """
+    return HttpResponse(html)
+
+
+@login_required
+@require_POST
+def create_senior_account(request):
+    """Create a senior account and attach to the default school. POST-only, director users only.
+    Expects JSON or form data: username (optional), email (required), first_name (optional), last_name (optional)
+    Returns JSON: {'ok': True, 'username': ..., 'password': ...} on success
+    """
+    school = get_default_school()
+    if not school:
+        return JsonResponse({'ok': False, 'error': 'No school configured'}, status=400)
+
+    # Directors can be stored as either admin or headmaster memberships.
+    from schools.models import SchoolUser
+    can_create_senior = SchoolUser.objects.filter(
+        user=request.user,
+        school=school,
+        role__in=['admin', 'headmaster'],
+        is_active=True,
+    ).exists()
+    if not can_create_senior and not request.user.is_superuser:
+        return JsonResponse({'ok': False, 'error': 'Permission denied'}, status=403)
+
+    data = request.POST or request.body
+    # prefer POST form fields
+    username = request.POST.get('username', '').strip()
+    email = request.POST.get('email', '').strip()
+    first_name = request.POST.get('first_name', '').strip()
+    last_name = request.POST.get('last_name', '').strip()
+
+    if not email:
+        return JsonResponse({'ok': False, 'error': 'Email is required'}, status=400)
+
+    User = get_user_model()
+    if not username:
+        username = email
+
+    # ensure uniqueness
+    base = username
+    i = 1
+    while User.objects.filter(username=username).exclude(email__iexact=email).exists():
+        username = f"{base}{i}"
+        i += 1
+
+    # generate a secure random password
+    password = get_random_string(12)
+
+    # create or update user
+    user = User.objects.filter(email__iexact=email).first()
+    if user:
+        created = False
+    else:
+        user, created = User.objects.get_or_create(username=username, defaults={'email': email, 'first_name': first_name, 'last_name': last_name})
+    if created:
+        user.set_password(password)
+        user.email = email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.is_active = True
+        user.save()
+    else:
+        # if user exists, set a new password and update fields
+        user.set_password(password)
+        user.email = email or user.email
+        if first_name: user.first_name = first_name
+        if last_name: user.last_name = last_name
+        user.is_active = True
+        user.save()
+
+    # attach SchoolUser
+    su, _ = SchoolUser.objects.get_or_create(user=user, school=school, defaults={'role': 'senior', 'is_active': True})
+    if su.role != 'senior' or not su.is_active:
+        su.role = 'senior'
+        su.is_active = True
+        su.save()
+
+    return JsonResponse({'ok': True, 'username': user.username, 'password': password})

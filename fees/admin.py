@@ -8,8 +8,8 @@ class FeeStructureAdmin(admin.ModelAdmin):
 
 @admin.register(FeeInvoice)
 class FeeInvoiceAdmin(admin.ModelAdmin):
-    list_display = ['invoice_number', 'student', 'amount', 'amount_paid', 'status']
-    list_filter = ['school', 'status', 'currency']
+    list_display = ['invoice_number', 'student', 'billing_period_label', 'amount', 'amount_paid', 'status']
+    list_filter = ['school', 'status', 'currency', 'billing_year', 'billing_month', 'term']
 
 @admin.register(FeePayment)
 class FeePaymentAdmin(admin.ModelAdmin):

@@ -1,12 +1,13 @@
 <input type="hidden" name="__invoices_status" value="{{ request.GET.status|default:'' }}">
 <div class="table-responsive">
   <table class="table table-hover mb-0">
-    <thead><tr><th>Invoice #</th><th>Student</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Invoice #</th><th>Student</th><th>Period</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
     <tbody>
       {% for inv in invoices %}
       <tr>
         <td><code>{{ inv.invoice_number }}</code></td>
         <td>{{ inv.student.user.get_full_name }}</td>
+        <td>{{ inv.billing_period_label }}</td>
         <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
         <td class="text-success">{{ inv.currency }} {{ inv.amount_paid }}</td>
         <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}">{{ inv.currency }} {{ inv.balance }}</td>
@@ -16,7 +17,7 @@
       </tr>
       {% endfor %}
       {% if invoices|length == 0 %}
-      <tr><td colspan="8" class="text-center text-muted py-4">No invoices found.</td></tr>
+      <tr><td colspan="9" class="text-center text-muted py-4">No invoices found.</td></tr>
       {% endif %}
     </tbody>
   </table>

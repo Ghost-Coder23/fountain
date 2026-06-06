@@ -2,6 +2,7 @@
   <div>
     <h5>Invoice {{ inv.invoice_number }}</h5>
     <div class="text-muted small">Student: {{ inv.student.user.get_full_name }}</div>
+    <div class="text-muted small">Billing Period: {{ inv.billing_period_label }}</div>
     <div class="text-muted small">Issued: {{ inv.issued_date }}</div>
   </div>
   <div>
@@ -13,6 +14,7 @@
   <div class="col-md-6">
     <table class="table table-sm mb-0">
       <tr><th>Fee</th><td>{{ inv.fee_structure.name|default:'General' }}</td></tr>
+      {% if inv.term %}<tr><th>Term</th><td>{{ inv.term.name }}</td></tr>{% endif %}
       <tr><th>Amount</th><td>{{ inv.currency }} {{ inv.amount }}</td></tr>
       <tr><th>Paid</th><td>{{ inv.currency }} {{ inv.amount_paid }}</td></tr>
       <tr><th>Balance</th><td class="{% if inv.balance > 0 %}text-danger{% else %}text-success{% endif %}">{{ inv.currency }} {{ inv.balance }}</td></tr>

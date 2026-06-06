@@ -25,6 +25,7 @@ class School(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
+    website = models.CharField(max_length=200, blank=True, help_text='School public website or URL')
     logo = models.ImageField(upload_to='school_logos/', blank=True, null=True)
     theme_color = models.CharField(max_length=7, default='#4F46E5', help_text='Hex color code')
     motto = models.CharField(max_length=200, blank=True)
@@ -104,6 +105,7 @@ class SchoolUser(SyncBaseModel):
         ('teacher', 'Teacher'),
         ('student', 'Student'),
         ('parent', 'Parent'),
+        ('senior', 'Senior'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='school_memberships')

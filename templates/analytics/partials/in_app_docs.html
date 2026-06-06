@@ -1,0 +1,113 @@
+<div class="help-docs">
+  <h6 class="fw-semibold">Help & Documentation (How to Use the System)</h6>
+  <h6 class="fw-semibold">Quick Help — Finance & Invoices</h6>
+
+  <p class="small text-muted mb-2">This short guide explains the key finance features available from the dashboard.</p>
+  <ul class="small">
+  <ul class="small">
+    <li><strong>View invoices:</strong> Click any finance tile (Unpaid, Partial, Overdue) to open the invoice modal. Use the search box to filter and click "View" to see invoice details.</li>
+    <li><strong>Run monthly invoice generation:</strong> Go to Payment Settings and use the "Run now" button to generate invoices immediately. Enable <em>Auto-generate Invoices</em> and set the day to automate monthly generation (requires a cron job as described below).</li>
+    <li><strong>Student details:</strong> Open a student profile to see their invoices and payment summary.</li>
+    <li><strong>Recording payments:</strong> Use the Finance Dashboard or the invoice detail page to record payments. Confirmed payments update invoice balances automatically.</li>
+  </ul>
+
+  <hr>
+  <h6 class="fw-semibold">2) Schools (roles & access)</h6>
+  <p class="small text-muted mb-2">Use the school dashboards to manage daily operations under your assigned role.</p>
+  </ul>
+    <li><strong>Headmaster/Admin:</strong> Can access approvals and fee management actions shown on the dashboard.</li>
+    <li><strong>Teacher:</strong> Can enter results for assigned classes/subjects (when the term is open/allowed).</li>
+  </ul>
+
+  <hr>
+  <h6 class="fw-semibold">3) Academics (students, classes, subjects)</h6>
+  <ul class="small">
+    <li><strong>Students:</strong> Add/enroll students via the dashboard shortcuts (e.g. <em>Enroll Student</em>).</li>
+    <li><strong>Classes/Sections:</strong> Create/manage class sections used for enrollment and results entry.</li>
+    <li><strong>Subjects & Assignments:</strong> Teachers are linked to <em>subjects</em> and <em>class sections</em> so results entry knows where to save marks.</li>
+  </ul>
+  <p class="small text-muted mt-2 mb-0">Tip: Many finance pages reference students and class sections, so keep academics data up to date.</p>
+
+  <hr>
+  <h6 class="fw-semibold">4) Results (CA + Exam + approval)</h6>
+  <p class="small text-muted mb-2">Results follow a status workflow. Use this as your checklist when marks are not showing where expected.</p>
+  <ul class="small">
+    <li><strong>Teacher:</strong> Enters marks for assigned subject/class/term.</li>
+    <li><strong>Submitted:</strong> Teacher completed entry and the result is waiting for approval.</li>
+    <li><strong>Approved / Locked:</strong> Headmaster approved and the term is effectively finalized for that result set (updates and edits are restricted).</li>
+  </ul>
+
+  <hr>
+  <h6 class="fw-semibold">5) Attendance (sessions & recording)</h6>
+  <ul class="small">
+    <li><strong>Teacher/Admin:</strong> Mark attendance for each class session.</li>
+    <li><strong>Finalized:</strong> A session can be marked as finalized (used by dashboards to calculate completion).</li>
+    <li><strong>Dashboards:</strong> Attendance widgets show completion for today and the weekly trend.</li>
+  </ul>
+
+  <hr>
+  <h6 class="fw-semibold">6) Fees & Invoices (core finance workflow)</h6>
+  <p class="small text-muted mb-2">This section covers fee structures, invoice generation, payments, and invoice statuses.</p>
+
+  <h6 class="fw-semibold mt-3">6.1 View invoices and statuses</h6>
+  <ul class="small">
+    <li><strong>Invoice list:</strong> Open the invoice list from the dashboard shortcut (e.g. <em>Record Payment</em> or <em>Invoices</em>).</li>
+    <li><strong>Search/filter:</strong> Use the search box on the dashboard to filter students/invoices, then use <strong>View</strong> to open the invoice detail modal/page.</li>
+    <li><strong>Status meaning:</strong>
+      <ul class="small mt-1 mb-0">
+        <li><strong>Unpaid:</strong> No confirmed payment applied yet.</li>
+        <li><strong>Partial:</strong> Some confirmed payment applied, but balance remains.</li>
+        <li><strong>Overdue:</strong> Invoice due date is in the past and still unpaid/partial.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h6 class="fw-semibold mt-3">6.2 Generate monthly invoices (manual + automatic)</h6>
+  <ul class="small">
+    <li><strong>Manual run:</strong> Go to <strong>Payment Settings</strong> and use <strong>Run now</strong> to generate invoices immediately.</li>
+    <li><strong>Automatic generation:</strong> Enable <em>Auto-generate Invoices</em> and set the day to automate monthly creation.</li>
+    <li><strong>Automation requirement:</strong> Automatic invoice generation depends on a server-side cron job.</li>
+  </ul>
+
+  <h6 class="fw-semibold mt-3">6.3 Record payments</h6>
+  <ul class="small">
+    <li><strong>Where to record:</strong> Use the <strong>Finance Dashboard</strong> or open an individual invoice and record payment from the invoice detail page/modal.</li>
+    <li><strong>Confirmation:</strong> Once a payment is saved as <strong>confirmed</strong>, invoice balances update accordingly.</li>
+    <li><strong>Overpayment handling:</strong> If payment exceeds the invoice balance, the system can move the extra into <strong>Student Credit</strong>.</li>
+  </ul>
+
+  <h6 class="fw-semibold mt-3">6.4 Student fee statement</h6>
+  <ul class="small">
+    <li><strong>Open statement:</strong> From the student profile or from the fee section, open <strong>Student Fee Statement</strong> to view invoices and payment summary.</li>
+  </ul>
+
+  <h6 class="fw-semibold mt-3">6.5 Expenses (school spending)</h6>
+  <ul class="small">
+    <li><strong>Record expenses:</strong> Use the Expense section to add expense categories and expense entries.</li>
+    <li><strong>Analytics:</strong> Finance dashboards may use revenue vs expense trends.</li>
+  </ul>
+
+  <hr>
+  <h6 class="fw-semibold">7) Automation (cron) — Monthly invoice generation</h6>
+  <p class="small text-muted mb-2">Automatic monthly invoice generation requires a cron job that runs once per day.</p>
+  <ul class="small">
+    <li>Ensure the cron job uses the correct management command for invoice generation.</li>
+    <li>Pass the correct <strong>--school</strong> argument (or schedule logic) so invoices are generated for the intended school tenant.</li>
+    <li>If you do not want automation, keep <em>Auto-generate Invoices</em> disabled and use <strong>Run now</strong> for manual runs.</li>
+  </ul>
+
+  <hr>
+  <div class="d-flex justify-content-between mt-2">
+    <small class="text-muted">These docs are shown inside the dashboard (role-based). For deeper steps, open the dedicated Usage Docs page.</small>
+    <a href="{% url 'analytics:docs_usage' %}" class="btn btn-sm btn-outline-primary">Open Docs</a>
+  </div>
+  <hr>
+  <h6 class="fw-semibold">Automation (cron)</h6>
+  <p class="small text-muted mb-2">To run automatic monthly invoice generation, add a cron job on the server that runs once per day. Example:</p>
+  <p class="small text-muted">Adjust the schedule and --school argument as needed. If you prefer, leave automation off and use the "Run now" button for manual runs.</p>
+  <hr>
+  <div class="d-flex justify-content-between mt-2">
+    <small class="text-muted">Full user guide available in the project README.</small>
+    <a href="{% url 'analytics:docs_usage' %}" class="btn btn-sm btn-outline-primary">Open Docs</a>
+  </div>
+</div>

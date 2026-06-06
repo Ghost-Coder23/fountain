@@ -1,4 +1,5 @@
 {% extends "base_dashboard.html" %}
+{% load dict_extras %}
 {% block title %}Invoices{% endblock %}
 {% block page_title %}Fee Invoices{% endblock %}
 {% block content %}
@@ -6,18 +7,28 @@
   <h5 class="mb-0">Invoices</h5>
   {% if school_role != 'parent' %}
   <div class="d-flex gap-2">
-    <a href="{% url 'fees:create_invoice' %}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>New</a>
-    <a href="{% url 'fees:bulk_invoice' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-people me-1"></i>Bulk</a>
+    <a href="{% url 'fees:create_invoice' %}?{{ period_query }}" class="btn btn-sm btn-primary"><i class="bi bi-plus me-1"></i>New</a>
+    <a href="{% url 'fees:bulk_invoice' %}?{{ period_query }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-people me-1"></i>Bulk</a>
   </div>
   {% endif %}
 </div>
 <div class="card mb-3">
   <div class="card-body py-2">
     <form id="invoice-filter-form" method="get" class="row g-2 align-items-end">
-      <div class="col-md-6">
-        <input type="text" name="search" id="invoice-search-input" class="form-control form-control-sm" placeholder="Search by name or invoice #" value="{{ search|default:'' }}">
+      <div class="col-md-4">
+        <label class="form-label small fw-bold text-muted text-uppercase">Billing Period</label>
+        <select name="period" class="form-select form-select-sm">
+          {% for option in billing_period.options %}
+          <option value="{{ option.key }}" {% if option.key == billing_period.key %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-4">
+        <label class="form-label small fw-bold text-muted text-uppercase">Search</label>
+        <input type="text" name="search" id="invoice-search-input" class="form-control form-control-sm" placeholder="Search by name or invoice #" value="{{ search|default:'' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-muted text-uppercase">Status</label>
         <select name="status" id="invoice-status-filter" class="form-select form-select-sm">
           <option value="">All Statuses</option>
           <option value="unpaid" {% if status_filter == 'unpaid' %}selected{% endif %}>Unpaid</option>
@@ -26,7 +37,7 @@
           <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue</option>
         </select>
       </div>
-      <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">Filter</button></div>
+      <div class="col-md-1"><button type="submit" class="btn btn-sm btn-primary w-100">Filter</button></div>
     </form>
   </div>
 </div>
@@ -34,15 +45,17 @@
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
-        <thead><tr><th>Invoice #</th><th>Student</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Invoice #</th><th>Student</th><th>Period</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Credit</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
         <tbody id="invoice-table-body">
           {% for inv in invoices %}
           <tr>
             <td><code>{{ inv.invoice_number }}</code></td>
             <td>{{ inv.student.user.get_full_name }}</td>
+            <td>{{ inv.billing_period_label }}</td>
             <td><span class="money-amount">{{ inv.currency }} {{ inv.amount }}</span></td>
             <td class="text-success"><span class="money-amount">{{ inv.currency }} {{ inv.amount_paid }}</span></td>
             <td class="{% if inv.balance > 0 %}text-danger fw-semibold{% else %}text-success{% endif %}"><span class="money-amount">{{ inv.currency }} {{ inv.balance }}</span></td>
+            <td class="text-success"><span class="money-amount">{{ inv.currency }} {{ student_credit_map|get_item:inv.student_id|default:0 }}</span></td>
             <td>{{ inv.due_date|default:"-" }}</td>
             <td><span class="badge {% if inv.status == 'paid' %}bg-success{% elif inv.status == 'partial' %}bg-warning text-dark{% elif inv.status == 'unpaid' or inv.status == 'overdue' %}bg-danger{% else %}bg-secondary{% endif %}">{{ inv.get_status_display }}</span></td>
             <td>
@@ -50,7 +63,7 @@
               <a href="{% url 'fees:invoice_pdf' inv.pk %}" class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:2px 7px;"><i class="bi bi-file-pdf"></i></a>
             </td>
           </tr>
-          {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No invoices found.</td></tr>
+          {% empty %}<tr><td colspan="9" class="text-center text-muted py-4">No invoices found for {{ billing_period.label }}.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -93,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Render the table
         if (!filtered || filtered.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No invoices found.</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No invoices found.</td></tr>`;
             return;
         }
 
@@ -106,6 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <tr>
                     <td><code>${inv.invoice_number || ''}</code></td>
                     <td>${studentName}</td>
+                    <td>${inv.billing_period_label || '-'}</td>
                     <td><span class="money-amount">${inv.currency || 'USD'} ${inv.amount || 0}</span></td>
                     <td class="text-success"><span class="money-amount">${inv.currency || 'USD'} ${amountPaid}</span></td>
                     <td class="${balance > 0 ? 'text-danger fw-semibold' : 'text-success'}"><span class="money-amount">${inv.currency || 'USD'} ${balance}</span></td>

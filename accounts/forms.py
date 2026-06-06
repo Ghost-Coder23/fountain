@@ -20,6 +20,14 @@ class CustomAuthenticationForm(AuthenticationForm):
         })
     )
 
+    def clean(self):
+        email = self.cleaned_data.get('username')
+        if email:
+            user = User.objects.filter(email__iexact=email).first()
+            if user:
+                self.cleaned_data['username'] = user.get_username()
+        return super().clean()
+
 
 class UserProfileForm(forms.ModelForm):
     first_name = forms.CharField(max_length=100)

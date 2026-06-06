@@ -1,1 +1,0 @@
-# Parent Registration Fix&#10;&#10;- [ ] 1. Edit schools/views.py ParentRegistrationView.form_valid to remove super().form_valid(form)&#10;- [ ] 2. Test registration POST&#10;- [ ] 3. Verify dashboard shows child&#10;- [ ] 4. Update TODOs&#10;- [ ] 5. attempt_completion

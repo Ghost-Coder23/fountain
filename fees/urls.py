@@ -13,6 +13,7 @@ urlpatterns = [
     path('invoices/create/', views.create_invoice, name='create_invoice'),
     path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
     path('invoices/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
+    path('invoices/<int:pk>/void-replace/', views.void_and_replace_invoice, name='void_and_replace_invoice'),
     path('invoices/<int:invoice_pk>/pay/', views.record_payment, name='record_payment'),
     path('payments/<int:payment_pk>/edit/', views.edit_payment, name='edit_payment'),
     path('invoices/bulk/', views.bulk_invoice, name='bulk_invoice'),
@@ -20,6 +21,7 @@ urlpatterns = [
     path('statement/<uuid:student_id>/', views.student_fee_statement, name='student_statement'),
     path('expenses/', views.expense_list, name='expense_list'),
     path('payment-config/', views.payment_config, name='payment_config'),
+    path('payment-config/run-generate/', views.run_generate_invoices, name='run_generate_invoices'),
     path('ajax/invoices/', views.invoice_list_fragment, name='invoice_fragment'),
     path('ajax/invoices/<int:pk>/', views.invoice_detail_fragment, name='invoice_detail_fragment'),
 ]

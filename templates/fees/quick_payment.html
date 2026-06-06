@@ -16,6 +16,9 @@
         
         <form method="post" id="quickPaymentForm" data-offline-model="fee_payment" data-offline-label="Quick payment">
           {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
+          {% endif %}
           
           <div class="row g-3">
             <div class="col-12">
@@ -29,6 +32,30 @@
               {{ form.fee_structure }}
               <div class="form-text small">{{ form.fee_structure.help_text }}</div>
               {% if form.fee_structure.errors %}<div class="text-danger small mt-1">{{ form.fee_structure.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted text-uppercase">{{ form.academic_year.label }}</label>
+              {{ form.academic_year }}
+              {% if form.academic_year.errors %}<div class="text-danger small mt-1">{{ form.academic_year.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted text-uppercase">{{ form.term.label }}</label>
+              {{ form.term }}
+              {% if form.term.errors %}<div class="text-danger small mt-1">{{ form.term.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted text-uppercase">{{ form.billing_month.label }}</label>
+              {{ form.billing_month }}
+              {% if form.billing_month.errors %}<div class="text-danger small mt-1">{{ form.billing_month.errors }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted text-uppercase">{{ form.billing_year.label }}</label>
+              {{ form.billing_year }}
+              {% if form.billing_year.errors %}<div class="text-danger small mt-1">{{ form.billing_year.errors }}</div>{% endif %}
             </div>
 
             <div class="col-md-6">

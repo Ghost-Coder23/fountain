@@ -9,6 +9,9 @@
       <div class="card-body">
         <form method="post" data-offline-model="fee_invoice" data-offline-label="Fee invoice">
           {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
+          {% endif %}
           {% for field in form %}
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:.83rem;">{{ field.label }}</label>
