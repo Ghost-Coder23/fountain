@@ -17,6 +17,27 @@
 <label class="form-label fw-bold">School Motto</label>
 <input type="text" name="motto" value="{{ object.motto|default:'' }}" class="form-control" placeholder="e.g. Excellence in Education">
 </div>
+
+<!-- Contact details (added): Address, Phone, Email, Website -->
+<div class="mb-3">
+  <label class="form-label fw-bold">Address</label>
+  <textarea name="address" class="form-control" rows="3" placeholder="School address (appears on PDFs)">{{ object.address|default:'' }}</textarea>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <label class="form-label fw-bold">Phone</label>
+    <input type="text" name="phone" value="{{ object.phone|default:'' }}" class="form-control" placeholder="e.g. +263 77 123 4567">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label fw-bold">Email</label>
+    <input type="email" name="email" value="{{ object.email|default:'' }}" class="form-control" placeholder="contact@school.example">
+  </div>
+</div>
+<div class="mb-3 mt-3">
+  <label class="form-label fw-bold">Website</label>
+  <input type="url" name="website" value="{{ object.website|default:'' }}" class="form-control" placeholder="https://www.school.example">
+</div>
+
 <hr class="my-4">
 <h5 class="fw-bold mb-3">Grading Configuration</h5>
 <div class="mb-3">

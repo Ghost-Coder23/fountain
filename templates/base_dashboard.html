@@ -807,14 +807,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
   </div>
 </div>
 
-<!-- Activity feed panel -->
-<div id="live-activity-feed" class="position-fixed" style="right:16px;bottom:16px;max-width:320px;z-index:1080;">
-  <div class="card shadow-sm">
-    <div class="card-header small fw-bold">Live Activity</div>
-    <div class="card-body p-2" id="activity-body" style="max-height:300px;overflow:auto;font-size:.85rem;"></div>
-  </div>
-</div>
-
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script src="/static/js/db.js"></script>
@@ -1117,33 +1109,6 @@ window.addEventListener('pageshow', (event) => {
     restoreSidebarScroll();
   }
 });
-
-// Activity feed script
-let lastActivityAt = null; // ISO timestamp of last seen activity
-async function loadActivityFeed() {
-  try {
-    const params = new URLSearchParams();
-    params.set('limit', '50');
-    if (lastActivityAt) params.set('since', lastActivityAt);
-    const url = '{% url "notifications:activity_feed" %}' + '?' + params.toString();
-    const resp = await fetch(url);
-    if (!resp.ok) return;
-    const items = await resp.json();
-    if (!items || items.length === 0) return;
-    // Ensure items are in ascending time order, find newest, then render newest-first
-    items.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-    const newest = items[items.length - 1];
-    const container = document.getElementById('activity-body');
-    // Render new items newest-first and prepend to existing content
-    const html = items.slice().reverse().map(it => `<div class="mb-2"><div class="fw-semibold">${it.actor}</div><div class="text-muted small">${it.verb} <strong>${it.target_type}#${it.target_id}</strong></div><div class="x-small text-muted">${new Date(it.created_at).toLocaleString()}</div></div>`).join('');
-    container.innerHTML = html + container.innerHTML;
-    // Update lastActivityAt to the newest returned item's timestamp
-    lastActivityAt = newest.created_at;
-  } catch(e) { console.warn('Activity feed load failed', e); }
-}
-// initial load and polling
-loadActivityFeed();
-setInterval(loadActivityFeed, 5000);
 </script>
 
 <!-- Install App Banner -->
