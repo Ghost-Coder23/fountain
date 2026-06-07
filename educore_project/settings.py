@@ -83,6 +83,7 @@ MIDDLEWARE = [
 
     'middleware.tenant_middleware.SchoolMiddleware',
     'core.middleware.RateLimitMiddleware',
+    'core.middleware.FriendlyErrorMiddleware',
 ]
 
 ROOT_URLCONF = 'educore_project.urls'

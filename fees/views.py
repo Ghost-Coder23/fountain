@@ -1,4 +1,5 @@
 from core.utils import get_default_school
+from core.utils_api import api_error, api_ok
 """
 Fees views - Fee structures, invoices, payments
 """
@@ -617,44 +618,16 @@ def invoice_pdf(request, pk):
 @login_required
 @require_role(['headmaster'])
 def invoice_list_fragment(request):
-    """Return rendered HTML fragment of invoices filtered by status for AJAX/modal.
-    Accepts GET params: status (unpaid|partial|paid|overdue), search, page
-    """
-    school = get_default_school()
-    billing_period = get_selected_billing_period(request, school)
+    """Return rendered HTML fragment of invoices filtered by status for AJAX/modal."""
+    if not request.is_ajax() and request.headers.get('accept','').find('application/json') == -1:
+        return api_error('AJAX request expected', status=400)
     status = request.GET.get('status')
-    search = request.GET.get('search', '').strip()
-    page = request.GET.get('page', 1)
-
-    invoices = FeeInvoice.objects.filter(school=school).select_related('student__user')
-    invoices = filter_invoices_for_period(invoices, billing_period)
+    school = get_default_school()
+    qs = FeeInvoice.objects.filter(school=school)
     if status:
-        if status == 'overdue':
-            invoices = invoices.filter(status__in=['unpaid', 'partial'], due_date__lt=timezone.now().date())
-        else:
-            invoices = invoices.filter(status=status)
-
-    if search:
-        invoices = invoices.filter(
-            student__user__first_name__icontains=search
-        ) | invoices.filter(
-            student__user__last_name__icontains=search
-        ) | invoices.filter(
-            invoice_number__icontains=search
-        )
-
-    invoices = invoices.order_by('-issued_date')
-
-    paginator = Paginator(invoices, 12)
-    try:
-        invoices_page = paginator.page(page)
-    except PageNotAnInteger:
-        invoices_page = paginator.page(1)
-    except EmptyPage:
-        invoices_page = paginator.page(paginator.num_pages)
-
-    html = render_to_string('fees/partials/invoice_fragment.html', {'invoices': invoices_page.object_list, 'page_obj': invoices_page}, request=request)
-    return JsonResponse({'html': html})
+        qs = qs.filter(status=status)
+    html = render_to_string('fees/_invoice_list_fragment.html', {'invoices': qs[:50]})
+    return api_ok({'html': html})
 
 
 @login_required
