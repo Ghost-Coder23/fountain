@@ -1,9 +1,10 @@
-{% ex
-{% block page_title %}Usage & Help{% endblock %}tends "base_dashboard.html" %}
+{% extends "base_dashboard.html" %}
 {% block title %}Usage Docs{% endblock %}
+{% block page_title %}Usage & Help{% endblock %}
 {% block content %}
   <div class="container mt-4">
     <div class="card">
+      <div class="card-header"><i class="bi bi-book-half me-2"></i> Help & Documentation</div>
       <div class="card-body">
         {% include "analytics/partials/in_app_docs.html" %}
       </div>

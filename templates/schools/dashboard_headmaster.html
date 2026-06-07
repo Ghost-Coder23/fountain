@@ -213,22 +213,4 @@
     </div>
 </div>
 
-{% if user.is_authenticated and (user|default:'' ) %}
-  {% if request.user.is_authenticated %}
-    <!-- Help card for headmaster/secretary -->
-    {% if role == 'headmaster' or role == 'secretary' %}
-    <div class="row g-3 mb-4">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header"><i class="bi bi-question-circle me-2"></i>Help & Documentation</div>
-          <div class="card-body">
-            {% include 'analytics/partials/in_app_docs.html' %}
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-  {% endif %}
-{% endif %}
-
 {% endblock %}

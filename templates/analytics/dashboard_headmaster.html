@@ -169,19 +169,6 @@
     </div>
   </div>
 
-  {% if user_role == 'headmaster' or user_role == 'secretary' %}
-  <div class="row g-3 mb-4">
-    <div class="col-12">
-      <div class="card dashboard-card">
-        <div class="card-header"><i class="bi bi-question-circle me-2"></i>Help & Documentation</div>
-        <div class="card-body">
-          {% include 'analytics/partials/in_app_docs.html' %}
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
   <div class="row g-3">
     {% if at_risk %}
     <div class="col-xl-6">

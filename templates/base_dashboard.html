@@ -657,6 +657,10 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
       <i class="bi bi-megaphone"></i> Announcements
     </a>
 
+    <!-- Docs link added to sidebar for quick access -->
+    <a href="{% url 'analytics:docs_usage' %}" class="nav-link {% if 'docs/usage' in request.path %}active{% endif %}">
+      <i class="bi bi-book-half"></i> Docs
+    </a>
     {% if school_role in 'parent,student' %}
     <div class="nav-section">My Account</div>
     {% if school_role == 'parent' %}
@@ -1115,19 +1119,31 @@ window.addEventListener('pageshow', (event) => {
 });
 
 // Activity feed script
+let lastActivityAt = null; // ISO timestamp of last seen activity
 async function loadActivityFeed() {
   try {
-    const resp = await fetch('{% url "notifications:activity_feed" %}');
+    const params = new URLSearchParams();
+    params.set('limit', '50');
+    if (lastActivityAt) params.set('since', lastActivityAt);
+    const url = '{% url "notifications:activity_feed" %}' + '?' + params.toString();
+    const resp = await fetch(url);
     if (!resp.ok) return;
     const items = await resp.json();
+    if (!items || items.length === 0) return;
+    // Ensure items are in ascending time order, find newest, then render newest-first
+    items.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+    const newest = items[items.length - 1];
     const container = document.getElementById('activity-body');
-    container.innerHTML = items.map(it => `<div class="mb-2"><div class="fw-semibold">${it.actor}</div><div class="text-muted small">${it.verb} <strong>${it.target_type}#${it.target_id}</strong></div><div class="x-small text-muted">${new Date(it.created_at).toLocaleString()}</div></div>`).join('');
-  } catch(e){console.warn('Activity feed load failed', e)}
+    // Render new items newest-first and prepend to existing content
+    const html = items.slice().reverse().map(it => `<div class="mb-2"><div class="fw-semibold">${it.actor}</div><div class="text-muted small">${it.verb} <strong>${it.target_type}#${it.target_id}</strong></div><div class="x-small text-muted">${new Date(it.created_at).toLocaleString()}</div></div>`).join('');
+    container.innerHTML = html + container.innerHTML;
+    // Update lastActivityAt to the newest returned item's timestamp
+    lastActivityAt = newest.created_at;
+  } catch(e) { console.warn('Activity feed load failed', e); }
 }
-// Poll every 5 seconds
-setInterval(loadActivityFeed, 5000);
-// initial load
+// initial load and polling
 loadActivityFeed();
+setInterval(loadActivityFeed, 5000);
 </script>
 
 <!-- Install App Banner -->
