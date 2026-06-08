@@ -18,8 +18,8 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
+
 ALLOWED_HOSTS = ['*'] if DEBUG else [
-    'fountain.curated.co.zw',
     'localhost',
     "FountainTest.pythonanywhere.com",
     '127.0.0.1',
@@ -28,8 +28,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
-    "http://127.0.0.1",
-    "https://fountain.curated.co.zw"
+    "http://127.0.0.1"
     "https://FountainTest.pythonanywhere.com",
     "https://www.FountainTest.pythonanywhere.com",
 ]
