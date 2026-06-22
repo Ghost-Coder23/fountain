@@ -16,7 +16,8 @@ SECRET_KEY = os.environ.get(
     'django-insecure-change-this-in-production-use-env-var'
 )
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+# DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = False
 
 
 ALLOWED_HOSTS = ['*'] if DEBUG else [
