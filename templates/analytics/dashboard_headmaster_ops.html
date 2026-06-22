@@ -3,6 +3,26 @@
 {% block page_title %}Senior Dashboard{% endblock %}
 {% block content %}
 <div class="container">
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5 col-lg-4">
+          <label class="form-label small fw-bold text-muted text-uppercase">Billing Period</label>
+          <select name="period" class="form-select" onchange="this.form.submit()">
+            {% for option in billing_period.options %}
+            <option value="{{ option.key }}" {% if option.key == billing_period.key %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-7 col-lg-8">
+          <div class="text-muted small">
+            Showing students, invoices, and payments for <strong>{{ billing_period.label }}</strong>.
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="row g-3 mb-3">
     <div class="col-md-3">
       <div class="card p-3">

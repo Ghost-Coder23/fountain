@@ -329,6 +329,11 @@ def create_invoice(request):
             invoice.invoice_number = str(uuid.uuid4().int)[:8]
             invoice.balance = invoice.amount
             invoice.save()
+            # Apply any available student credit to the newly created invoice
+            try:
+                invoice.apply_student_credit()
+            except Exception:
+                pass
             messages.success(request, f'Invoice #{invoice.invoice_number} created.')
             return redirect('fees:invoice_detail', pk=invoice.pk)
     return render(request, 'fees/invoice_form.html', {'form': form, 'title': 'Create Invoice', 'billing_period': billing_period})

@@ -68,6 +68,7 @@ def dashboard(request):
 def headmaster_only_dashboard(request, school, membership):
     """Operational dashboard for headmasters — no revenue totals, focused on students, invoices and payments."""
     today = date.today()
+    billing_period = get_selected_billing_period(request, school, today=today)
 
     # Searches
     student_q = request.GET.get('student_search', '').strip()
@@ -96,6 +97,8 @@ def headmaster_only_dashboard(request, school, membership):
         students_with_balance.append({'student': s, 'balance': invoice_sums.get(s.id, 0)})
 
     invoices = FeeInvoice.objects.filter(school=school).select_related('student__user', 'fee_structure')
+    invoices = filter_invoices_for_period(invoices, billing_period)
+    
     if invoice_q:
         invoices = invoices.filter(
             Q(student__user__first_name__icontains=invoice_q) |
@@ -105,15 +108,21 @@ def headmaster_only_dashboard(request, school, membership):
         )
     invoices = invoices.order_by('-issued_date')[:200]
 
-    recent_payments = FeePayment.objects.filter(invoice__school=school, status='confirmed').select_related('invoice__student__user').order_by('-payment_date')[:20]
+    recent_payments = FeePayment.objects.filter(
+        invoice__school=school, 
+        status='confirmed',
+        invoice__in=filter_invoices_for_period(FeeInvoice.objects.filter(school=school), billing_period)
+    ).select_related('invoice__student__user').order_by('-payment_date')[:20]
 
-    # Operational counts
-    unpaid_students = FeeInvoice.objects.filter(school=school, status='unpaid').values('student').distinct().count()
-    partial_students = FeeInvoice.objects.filter(school=school, status='partial').values('student').distinct().count()
-    overdue_invoices = FeeInvoice.objects.filter(school=school, status__in=['unpaid', 'partial'], due_date__lt=today).count()
+    # Operational counts for selected period
+    period_invoices = filter_invoices_for_period(FeeInvoice.objects.filter(school=school), billing_period)
+    unpaid_students = period_invoices.filter(status='unpaid').values('student').distinct().count()
+    partial_students = period_invoices.filter(status='partial').values('student').distinct().count()
+    overdue_invoices = period_invoices.filter(status__in=['unpaid', 'partial', 'overdue'], due_date__lt=today).count()
 
     context = {
-        'role': 'headmaster',
+        'role': 'senior',
+        'billing_period': billing_period,
         'students_with_balance': students_with_balance,
         'students': students,
         'invoices': invoices,

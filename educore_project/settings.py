@@ -28,7 +28,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else [
 # CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
-    "http://127.0.0.1"
+    "http://127.0.0.1",
     "https://FountainTest.pythonanywhere.com",
     "https://www.FountainTest.pythonanywhere.com",
 ]

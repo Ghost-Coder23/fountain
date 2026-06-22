@@ -12,6 +12,44 @@ class TermForm(forms.ModelForm):
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        academic_year = cleaned_data.get('academic_year')
+        term_number = cleaned_data.get('term_number')
+
+        if start_date and end_date and start_date >= end_date:
+            raise forms.ValidationError("Start date must be before end date.")
+
+        # Check for term_number uniqueness within the same academic year
+        if academic_year and term_number:
+            # Exclude the current instance if we're updating
+            queryset = Term.objects.filter(
+                academic_year=academic_year,
+                term_number=term_number
+            )
+            if self.instance.pk:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise forms.ValidationError(
+                    f"Term {term_number} already exists for this academic year."
+                )
+
+        # If setting is_current=True, make sure we handle other current terms in the academic year
+        if cleaned_data.get('is_current'):
+            other_terms = Term.objects.filter(
+                academic_year=academic_year,
+                is_current=True
+            )
+            if self.instance.pk:
+                other_terms = other_terms.exclude(pk=self.instance.pk)
+            if other_terms.exists():
+                # We'll automatically unset is_current on other terms instead of raising an error
+                pass
+
+        return cleaned_data
+
 
 class GradeScaleForm(forms.ModelForm):
     class Meta:

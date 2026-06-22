@@ -245,6 +245,11 @@ class FeeInvoice(models.Model):
             )
             new_invoice.replaced_invoice = self
             new_invoice.save()
+            # Apply any available student credit to the replacement invoice
+            try:
+                new_invoice.apply_student_credit()
+            except Exception:
+                pass
             # create activity feed entry
             try:
                 Activity.objects.create(

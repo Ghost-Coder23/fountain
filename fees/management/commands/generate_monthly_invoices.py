@@ -76,5 +76,10 @@ class Command(BaseCommand):
                         issued_date=date(year, month, 1),
                         created_by=None,
                     )
+                    # Apply any available student credit to the newly created invoice
+                    try:
+                        inv.apply_student_credit()
+                    except Exception as e:
+                        self.stdout.write(self.style.WARNING(f"Failed to apply credit for student {student.id}: {e}"))
                     processed += 1
         self.stdout.write(self.style.SUCCESS(f'Processed {processed} invoices'))

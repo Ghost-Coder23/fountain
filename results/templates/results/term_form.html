@@ -1,24 +1,45 @@
 {% extends 'base_dashboard.html' %}
-{% block title %}Add Term{% endblock %}
-{% block page_title %}Add Academic Term{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Term{% else %}Add Term{% endif %}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Academic Term{% else %}Add Academic Term{% endif %}{% endblock %}
 {% block content %}
 <div class="row justify-content-center"><div class="col-md-5">
 <div class="card"><div class="card-body">
 <form method="post">{% csrf_token %}
-<div class="mb-3"><label class="form-label">Term</label>
-<select name="term_number" class="form-select" required>
-<option value="1">First Term</option><option value="2">Second Term</option><option value="3">Third Term</option>
-</select></div>
-<div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" placeholder="e.g. First Term 2024" required></div>
-<div class="mb-3"><label class="form-label">Academic Year</label>
-<select name="academic_year" class="form-select" required>
-<option value="">---------</option>
-{% for yr in form.fields.academic_year.queryset %}<option value="{{ yr.id }}">{{ yr.name }}</option>{% endfor %}
-</select></div>
-<div class="mb-3"><label class="form-label">Start Date</label><input type="date" name="start_date" class="form-control" required></div>
-<div class="mb-3"><label class="form-label">End Date</label><input type="date" name="end_date" class="form-control" required></div>
-<div class="form-check mb-3"><input type="checkbox" name="is_current" class="form-check-input" id="isCurrent"><label class="form-check-label" for="isCurrent">Set as current term</label></div>
-<button type="submit" class="btn btn-primary">Save Term</button>
+<div class="mb-3">
+    <label class="form-label">Term</label>
+    <select name="term_number" class="form-select" required>
+        <option value="">---------</option>
+        {% for value, label in form.fields.term_number.choices %}
+        <option value="{{ value }}" {% if value == form.term_number.value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="mb-3">
+    <label class="form-label">Name</label>
+    <input type="text" name="name" class="form-control" placeholder="e.g. First Term 2024" value="{{ form.name.value|default_if_none:'' }}" required>
+</div>
+<div class="mb-3">
+    <label class="form-label">Academic Year</label>
+    <select name="academic_year" class="form-select" required>
+        <option value="">---------</option>
+        {% for yr in form.fields.academic_year.queryset %}
+        <option value="{{ yr.id }}" {% if yr.id == form.academic_year.value %}selected{% endif %}>{{ yr.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+<div class="mb-3">
+    <label class="form-label">Start Date</label>
+    <input type="date" name="start_date" class="form-control" value="{{ form.start_date.value|default_if_none:'' }}" required>
+</div>
+<div class="mb-3">
+    <label class="form-label">End Date</label>
+    <input type="date" name="end_date" class="form-control" value="{{ form.end_date.value|default_if_none:'' }}" required>
+</div>
+<div class="form-check mb-3">
+    <input type="checkbox" name="is_current" class="form-check-input" id="isCurrent" {% if form.is_current.value %}checked{% endif %}>
+    <label class="form-check-label" for="isCurrent">Set as current term</label>
+</div>
+<button type="submit" class="btn btn-primary">{% if form.instance.pk %}Update Term{% else %}Save Term{% endif %}</button>
 <a href="{% url 'results:term_list' %}" class="btn btn-secondary ms-2">Cancel</a>
 </form>
 </div></div>

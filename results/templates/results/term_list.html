@@ -2,7 +2,7 @@
 {% block title %}Terms{% endblock %}
 {% block page_title %}Academic Terms{% endblock %}
 {% block content %}
-{% if school_role in 'headmaster,admin' %}
+{% if school_role in 'headmaster,admin,senior' %}
 <div class="d-flex justify-content-between mb-3">
 <h5 class="fw-bold mb-0">Terms</h5>
 <a href="{% url 'results:term_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Add Term</a>

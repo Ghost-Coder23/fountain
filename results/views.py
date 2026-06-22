@@ -27,7 +27,7 @@ class TermListView(SchoolRoleMixin, ListView):
     model = Term
     template_name = 'results/term_list.html'
     context_object_name = 'terms'
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'senior']
 
     def get_queryset(self):
         return Term.objects.filter(
@@ -41,7 +41,7 @@ class TermCreateView(SchoolRoleMixin, CreateView):
     form_class = TermForm
     template_name = 'results/term_form.html'
     success_url = reverse_lazy('results:term_list')
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'senior']
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -50,6 +50,12 @@ class TermCreateView(SchoolRoleMixin, CreateView):
         return form
 
     def form_valid(self, form):
+        # If this term is set as current, unset all other terms in the academic year
+        if form.cleaned_data.get('is_current'):
+            Term.objects.filter(
+                academic_year=form.cleaned_data['academic_year'],
+                is_current=True
+            ).exclude(pk=self.object.pk if self.object else None).update(is_current=False)
         messages.success(self.request, 'Term created successfully!')
         return super().form_valid(form)
 
@@ -60,7 +66,7 @@ class TermUpdateView(SchoolRoleMixin, UpdateView):
     form_class = TermForm
     template_name = 'results/term_form.html'
     success_url = reverse_lazy('results:term_list')
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'senior']
 
     def get_queryset(self):
         return Term.objects.filter(
@@ -74,6 +80,12 @@ class TermUpdateView(SchoolRoleMixin, UpdateView):
         return form
 
     def form_valid(self, form):
+        # If this term is set as current, unset all other terms in the academic year
+        if form.cleaned_data.get('is_current'):
+            Term.objects.filter(
+                academic_year=form.cleaned_data['academic_year'],
+                is_current=True
+            ).exclude(pk=self.object.pk).update(is_current=False)
         messages.success(self.request, 'Term updated successfully!')
         return super().form_valid(form)
 
@@ -83,7 +95,7 @@ class TermDeleteView(SchoolRoleMixin, DeleteView):
     model = Term
     template_name = 'results/term_confirm_delete.html'
     success_url = reverse_lazy('results:term_list')
-    required_roles = ['headmaster', 'admin']
+    required_roles = ['headmaster', 'admin', 'senior']
 
     def get_queryset(self):
         return Term.objects.filter(
