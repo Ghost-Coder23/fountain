@@ -313,36 +313,38 @@
           <div class="section-note mb-3">Collections, outstanding balances, and reconciliation status.</div>
           <div class="row g-2 mb-3">
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=paid" class="mini-metric text-decoration-none">
                 <div class="mini-value text-success"><span class="money-amount">${{ total_paid|floatformat:2 }}</span></div>
                 <div class="mini-label">Collected</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=unpaid" class="mini-metric text-decoration-none">
                 <div class="mini-value text-danger"><span class="money-amount">${{ outstanding|floatformat:2 }}</span></div>
                 <div class="mini-label">Outstanding</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=unpaid" class="mini-metric text-decoration-none">
                 <div class="mini-value text-warning">{{ unpaid_invoices }}</div>
                 <div class="mini-label">Unpaid</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=partial" class="mini-metric text-decoration-none">
                 <div class="mini-value text-info">{{ partial_invoices }}</div>
                 <div class="mini-label">Partial</div>
-              </div>
+              </a>
             </div>
           </div>
           <div class="row g-2">
             <div class="col-6">
-              <div class="d-flex justify-content-between small text-muted mb-1">
-                <span><i class="bi bi-exclamation-triangle me-1"></i>Overdue Invoices</span>
-                <span class="{% if overdue_invoices > 0 %}text-danger fw-bold{% endif %}">{{ overdue_invoices }}</span>
-              </div>
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=overdue" class="text-decoration-none">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                  <span><i class="bi bi-exclamation-triangle me-1"></i>Overdue Invoices</span>
+                  <span class="{% if overdue_invoices > 0 %}text-danger fw-bold{% endif %}">{{ overdue_invoices }}</span>
+                </div>
+              </a>
             </div>
             <div class="col-6">
               <div class="d-flex justify-content-between small text-muted mb-1">
@@ -364,22 +366,22 @@
         <div class="card-body">
           <div class="row g-2">
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=unpaid" class="mini-metric text-decoration-none">
                 <div class="mini-value text-warning">{{ unpaid_invoices }}</div>
                 <div class="mini-label">Unpaid</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=partial" class="mini-metric text-decoration-none">
                 <div class="mini-value text-info">{{ partial_invoices }}</div>
                 <div class="mini-label">Partial</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
-              <div class="mini-metric">
+              <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=overdue" class="mini-metric text-decoration-none">
                 <div class="mini-value text-danger">{{ overdue_invoices }}</div>
                 <div class="mini-label">Overdue</div>
-              </div>
+              </a>
             </div>
             <div class="col-3">
               <div class="mini-metric">

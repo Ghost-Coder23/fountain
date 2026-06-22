@@ -123,6 +123,7 @@ def headmaster_only_dashboard(request, school, membership):
     context = {
         'role': 'senior',
         'billing_period': billing_period,
+        'period_query': period_query_string(billing_period),
         'students_with_balance': students_with_balance,
         'students': students,
         'invoices': invoices,

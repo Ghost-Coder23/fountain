@@ -25,22 +25,28 @@
 
   <div class="row g-3 mb-3">
     <div class="col-md-3">
-      <div class="card p-3">
-        <div class="fw-semibold small text-muted">Unpaid Students</div>
-        <div class="h2 mt-1">{{ unpaid_students }}</div>
-      </div>
+      <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=unpaid" class="text-decoration-none">
+        <div class="card p-3">
+          <div class="fw-semibold small text-muted">Unpaid Students</div>
+          <div class="h2 mt-1">{{ unpaid_students }}</div>
+        </div>
+      </a>
     </div>
     <div class="col-md-3">
-      <div class="card p-3">
-        <div class="fw-semibold small text-muted">Partially Paid</div>
-        <div class="h2 mt-1">{{ partial_students }}</div>
-      </div>
+      <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=partial" class="text-decoration-none">
+        <div class="card p-3">
+          <div class="fw-semibold small text-muted">Partially Paid</div>
+          <div class="h2 mt-1">{{ partial_students }}</div>
+        </div>
+      </a>
     </div>
     <div class="col-md-3">
-      <div class="card p-3">
-        <div class="fw-semibold small text-muted">Overdue Invoices</div>
-        <div class="h2 mt-1">{{ overdue_invoices }}</div>
-      </div>
+      <a href="{% url 'fees:invoice_list' %}?{{ period_query }}&status=overdue" class="text-decoration-none">
+        <div class="card p-3">
+          <div class="fw-semibold small text-muted">Overdue Invoices</div>
+          <div class="h2 mt-1">{{ overdue_invoices }}</div>
+        </div>
+      </a>
     </div>
     <div class="col-md-3">
       <div class="card p-3">
