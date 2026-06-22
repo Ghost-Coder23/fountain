@@ -1,0 +1,10 @@
+{% extends "base_public.html" %}
+{% block title %}Bad Request{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+  <h1 class="display-4 fw-bold">400</h1>
+  <h2 class="fw-bold mb-3">Bad Request</h2>
+  <p class="text-muted mb-4">The server couldn't understand your request. Please check your input and try again.</p>
+  <a href="{% url 'home' %}" class="btn btn-primary">Go to Homepage</a>
+</div>
+{% endblock %}

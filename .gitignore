@@ -12,4 +12,7 @@ staticfiles/
 db.sqlite3
 *.sqlite3
 *.db
+# Log files
+logs/*
+!logs/.gitkeep
 
