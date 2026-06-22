@@ -299,8 +299,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif; padding-top: var(--navbar-heig
 <div id="sync-indicator" class="sync-status"></div>
 
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<!--
 <script src="/static/js/db.js"></script>
 <script src="/static/js/sync.js"></script>
+-->
 <script>
 // Navbar scroll effect
 window.addEventListener('scroll', function() {
@@ -312,6 +314,7 @@ window.addEventListener('scroll', function() {
     }
 });
 
+<!--
 // PWA Registration and Initialization
 const tenantPrefix = "{{ current_school.subdomain|default:'global' }}";
 let db, syncManager;
@@ -331,10 +334,10 @@ if ('serviceWorker' in navigator) {
             window.syncManager = syncManager;
             
             // Perform initial sync if needed
-            const hasSynced = localStorage.getItem(`synced_${tenantPrefix}`);
+            const hasSynced = localStorage.getItem(`synced_${tenantPrefix}');
             if (!hasSynced && navigator.onLine) {
                 await syncManager.initialSync();
-                localStorage.setItem(`synced_${tenantPrefix}`, 'true');
+                localStorage.setItem(`synced_${tenantPrefix}'), 'true');
             }
 
         } catch (error) {
@@ -342,6 +345,7 @@ if ('serviceWorker' in navigator) {
         }
     });
  }
+-->
  </script>
  {% block extra_js %}{% endblock %}
 </body>

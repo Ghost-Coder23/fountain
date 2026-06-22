@@ -144,6 +144,68 @@ body{font-family:'Segoe UI',system-ui,sans-serif; background-color: #fff5f5;}
 </div>
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script>
+// PWA Install Banner (without service worker)
+console.log('[InstallBanner] Initializing install banner...');
+
+let deferredPrompt;
+const installBanner = document.getElementById('installBanner');
+const installBtn = document.getElementById('installBtn');
+const dismissBtn = document.getElementById('dismissInstall');
+
+// Log browser info
+console.log('[InstallBanner] Browser:', navigator.userAgent);
+console.log('[InstallBanner] Is HTTPS?', window.location.protocol === 'https:');
+console.log('[InstallBanner] Is localhost?', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+console.log('[InstallBanner] Install dismissed before?', localStorage.getItem('installDismissed') === 'true');
+
+// Check if user already dismissed
+if (localStorage.getItem('installDismissed') !== 'true') {
+  console.log('[InstallBanner] Waiting for beforeinstallprompt event...');
+  
+  window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('[InstallBanner] ✅ beforeinstallprompt event fired!');
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.classList.add('show');
+    console.log('[InstallBanner] Showing install banner!');
+  });
+} else {
+  console.log('[InstallBanner] Install banner was previously dismissed - not showing.');
+}
+
+// App installed event
+window.addEventListener('appinstalled', (e) => {
+  console.log('[InstallBanner] ✅ App installed successfully!');
+  installBanner.classList.remove('show');
+  deferredPrompt = null;
+});
+
+// Install button click
+installBtn.addEventListener('click', async () => {
+  console.log('[InstallBanner] Install button clicked!');
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('[InstallBanner] User choice outcome:', outcome);
+    if (outcome === 'accepted') {
+      console.log('[InstallBanner] User accepted the install prompt');
+    }
+    deferredPrompt = null;
+    installBanner.classList.remove('show');
+  } else {
+    console.warn('[InstallBanner] No deferredPrompt available - cannot show install prompt.');
+  }
+});
+
+// Dismiss button click
+dismissBtn.addEventListener('click', () => {
+  console.log('[InstallBanner] Dismiss button clicked!');
+  installBanner.classList.remove('show');
+  localStorage.setItem('installDismissed', 'true');
+});
+</script>
+<!--
+<script>
 // PWA Install Banner and Service Worker
 console.log('[InstallBanner] Initializing install banner...');
 
@@ -219,6 +281,7 @@ if ('serviceWorker' in navigator) {
   console.warn('[InstallBanner] Service Worker API not available');
 }
 </script>
+-->
 {% block extra_js %}{% endblock %}
 </body>
 </html>

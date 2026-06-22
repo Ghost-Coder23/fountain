@@ -702,11 +702,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
     </a>
     {% endif %}
 
+    <!--
     <a href="{% url 'offline_sync' %}" class="nav-link {% if request.resolver_match.url_name == 'offline_sync' %}active{% endif %}">
       <i class="bi bi-cloud-arrow-up"></i>
       <span>Offline Sync</span>
       <span id="sync-sidebar-badge" class="badge bg-warning text-dark ms-auto d-none" style="font-size: 0.65rem; border-radius: 50px;">0</span>
     </a>
+    -->
 
     {% if user.is_superuser %}
     <div class="nav-section">Platform</div>
@@ -809,9 +811,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; marg
 
 <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<!--
 <script src="/static/js/db.js"></script>
 <script src="/static/js/sync.js"></script>
 <script src="/static/js/offline-utils.js"></script>
+-->
 <script>
 // PWA Registration and Initialization
 const tenantPrefix = "{{ current_school.subdomain|default:'global' }}";
